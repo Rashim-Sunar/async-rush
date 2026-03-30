@@ -13,12 +13,10 @@ import EngineComponent from './components/EngineComponent';
 import GameControls from './components/GameControls';
 import LevelComplete from './components/LevelComplete';
 import FeedbackOverlay from './components/FeedbackOverlay';
+import EventLoopWidget from './components/EventLoopWidget';
+import FlowAnimation from './components/FlowAnimation';
 import EngineScene from './scene/EngineScene';
 
-/**
- * App — Main application component
- * Assembles 3D scene (background) + 2D game UI (overlay)
- */
 export default function App() {
   return (
     <GameProvider>
@@ -34,32 +32,31 @@ function GameBoard() {
 
   const [activeBall, setActiveBall] = useState(null);
 
-  // DnD Sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
     })
   );
 
-  // Handle drag start
   const handleDragStart = useCallback((event) => {
+    if (phase === 'animating' || phase === 'complete' || phase === 'ready') return;
     const ball = event.active.data.current?.ball;
     if (ball) setActiveBall(ball);
-  }, []);
+  }, [phase]);
 
-  // Handle drag end — validate placement
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
     setActiveBall(null);
+
+    if (phase === 'animating' || phase === 'complete' || phase === 'ready') return;
 
     if (over && active.data.current?.ball) {
       const ballId = active.data.current.ball.id;
       const componentId = over.id;
       actions.placeBall(ballId, componentId);
     }
-  }, [actions]);
+  }, [actions, phase]);
 
-  // Get remaining ball objects
   const ballObjects = remainingBalls
     .map(id => level.balls.find(b => b.id === id))
     .filter(Boolean);
@@ -77,12 +74,10 @@ function GameBoard() {
         overflow: 'hidden',
         background: 'linear-gradient(145deg, #0f0a2e 0%, #1a0e3e 40%, #12082e 100%)',
       }}>
-        {/* === 3D SCENE (BACKGROUND) === */}
         <Suspense fallback={null}>
           <EngineScene phase={phase} />
         </Suspense>
 
-        {/* === BACKGROUND DECORATION === */}
         <div style={{
           position: 'absolute',
           inset: 0,
@@ -90,7 +85,6 @@ function GameBoard() {
           overflow: 'hidden',
           zIndex: 1,
         }}>
-          {/* Gradient orbs for depth */}
           <div style={{
             position: 'absolute',
             top: '10%',
@@ -121,7 +115,6 @@ function GameBoard() {
           }} />
         </div>
 
-        {/* === 2D UI OVERLAY === */}
         <div style={{
           position: 'relative',
           zIndex: 10,
@@ -134,14 +127,12 @@ function GameBoard() {
           padding: 20,
         }}>
 
-          {/* --- TOP BAR: Logo + Controls + Hint --- */}
           <div style={{
             gridColumn: '1 / -1',
             display: 'flex',
             alignItems: 'flex-start',
             gap: 16,
           }}>
-            {/* Logo + Game Controls */}
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <motion.span
@@ -166,13 +157,11 @@ function GameBoard() {
               <GameControls />
             </div>
 
-            {/* Hint Bubble — top right */}
             <div style={{ flexShrink: 0 }}>
               <HintBubble />
             </div>
           </div>
 
-          {/* --- LEFT COLUMN: Code + Output --- */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -183,48 +172,30 @@ function GameBoard() {
             <OutputPanel />
           </div>
 
-          {/* --- CENTER: Engine Components (Drop Zones) --- */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gridTemplateRows: '1fr 1fr',
             gap: 12,
             alignContent: 'center',
+            position: 'relative',
           }}>
             {ENGINE_COMPONENTS.map((comp) => (
               <EngineComponent key={comp.id} component={comp} />
             ))}
 
-            {/* Event Loop indicator in center of grid */}
             <div style={{
               position: 'absolute',
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
               zIndex: 5,
+              pointerEvents: 'none',
             }}>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: phase === 'execute' ? 2 : 8, repeat: Infinity, ease: 'linear' }}
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  border: `3px solid ${phase === 'execute' ? 'rgba(251, 191, 36, 0.6)' : 'rgba(251, 191, 36, 0.2)'}`,
-                  borderTopColor: phase === 'execute' ? '#fbbf24' : 'rgba(251, 191, 36, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: phase === 'execute' ? '0 0 20px rgba(251, 191, 36, 0.3)' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 18 }}>🔁</span>
-              </motion.div>
+              <EventLoopWidget />
             </div>
           </div>
 
-          {/* --- RIGHT COLUMN: Instructions --- */}
           <div className="glass-card" style={{
             padding: 16,
             display: 'flex',
@@ -243,32 +214,31 @@ function GameBoard() {
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
                 <span style={{ fontSize: 14, flexShrink: 0 }}>2️⃣</span>
-                <span>Drag the correct task ball to its engine component</span>
+                <span>Drag each task ball to its engine component <strong>in code order</strong></span>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
                 <span style={{ fontSize: 14, flexShrink: 0 }}>3️⃣</span>
-                <span>Click <strong>Execute</strong> to run the task</span>
+                <span>Once all placed, click <strong>Execute</strong></span>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
                 <span style={{ fontSize: 14, flexShrink: 0 }}>4️⃣</span>
-                <span>Watch the output appear in the terminal</span>
+                <span>Watch the animated flow through the engine!</span>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 14, flexShrink: 0 }}>5️⃣</span>
-                <span>Complete all steps to finish the level!</span>
+                <span>See how the Event Loop moves tasks to the Call Stack</span>
               </div>
             </div>
 
-            {/* Color Legend */}
             <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid rgba(167, 139, 250, 0.15)' }}>
               <span style={{ fontWeight: 700, fontSize: 11, color: 'var(--color-text-dim)', letterSpacing: 1, display: 'block', marginBottom: 8 }}>
                 TASK TYPES
               </span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
-                  { color: '#4ade80', label: 'Sync → Call Stack', emoji: '🟢' },
-                  { color: '#c084fc', label: 'Promise → Microtask', emoji: '🟣' },
-                  { color: '#60a5fa', label: 'setTimeout → Macrotask', emoji: '🔵' },
+                  { color: '#4ade80', label: 'Sync \u2192 Call Stack', emoji: '🟢' },
+                  { color: '#c084fc', label: 'Promise \u2192 Microtask', emoji: '🟣' },
+                  { color: '#60a5fa', label: 'setTimeout \u2192 Macrotask', emoji: '🔵' },
                 ].map((item) => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
                     <span>{item.emoji}</span>
@@ -279,7 +249,6 @@ function GameBoard() {
             </div>
           </div>
 
-          {/* --- BOTTOM: Task Balls Tray --- */}
           <div style={{
             gridColumn: '1 / -1',
             display: 'flex',
@@ -314,7 +283,7 @@ function GameBoard() {
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{
                         scale: 1,
-                        opacity: 1,
+                        opacity: phase === 'animating' || phase === 'ready' ? 0.4 : 1,
                         y: [0, -4, 0],
                       }}
                       exit={{ scale: 0, opacity: 0 }}
@@ -332,7 +301,9 @@ function GameBoard() {
                     animate={{ opacity: 1 }}
                     style={{ fontSize: 13, color: 'var(--color-text-dim)' }}
                   >
-                    {phase === 'complete' ? '🎉 All done!' : '⏳ Execute to continue...'}
+                    {phase === 'complete' ? '🎉 All done!' :
+                     phase === 'ready' ? '✅ Ready to execute!' :
+                     phase === 'animating' ? '⚡ Running...' : '⏳ Place all balls...'}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -340,11 +311,10 @@ function GameBoard() {
           </div>
         </div>
 
-        {/* === OVERLAYS === */}
         <FeedbackOverlay />
         <LevelComplete />
+        <FlowAnimation />
 
-        {/* Drag overlay for smooth drag visuals */}
         <DragOverlay dropAnimation={{
           duration: 200,
           easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',

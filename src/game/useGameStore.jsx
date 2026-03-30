@@ -1,24 +1,24 @@
-import { createContext, useContext, useReducer, useCallback } from 'react';
+import { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import { LEVELS } from './levels';
-
-/**
- * Game State Management (Context + useReducer)
- * Handles: level progression, ball placement, execution flow, scoring
- */
 
 const initialState = {
   currentLevelIndex: 0,
-  currentStepIndex: 0,
-  phase: 'drag',        // 'drag' | 'execute' | 'animating' | 'complete'
+  currentPlacementIndex: 0,
+  currentFlowIndex: 0,
+  currentAnimWaypoint: 0,
+  phase: 'drag',
   score: 0,
   totalMoves: 0,
   wrongMoves: 0,
-  outputs: [],           // strings that appear in terminal
-  placedBalls: {},        // { componentId: [ballId, ...] }
-  remainingBalls: [],     // balls still in the tray
-  executedBalls: [],      // balls that have been executed
-  feedback: null,         // { type: 'success'|'error', ballId, message } or null
+  outputs: [],
+  placedBalls: {},
+  remainingBalls: [],
+  executedBalls: [],
+  feedback: null,
   showLevelComplete: false,
+  animatingBall: null,
+  eventLoopActive: false,
+  allPlaced: false,
 };
 
 function getLevel(state) {
@@ -34,7 +34,9 @@ function gameReducer(state, action) {
       return {
         ...state,
         currentLevelIndex: action.levelIndex ?? state.currentLevelIndex,
-        currentStepIndex: 0,
+        currentPlacementIndex: 0,
+        currentFlowIndex: 0,
+        currentAnimWaypoint: 0,
         phase: 'drag',
         outputs: [],
         placedBalls: {},
@@ -44,66 +46,155 @@ function gameReducer(state, action) {
         showLevelComplete: false,
         wrongMoves: 0,
         totalMoves: 0,
+        animatingBall: null,
+        eventLoopActive: false,
+        allPlaced: false,
       };
     }
 
     case 'PLACE_BALL': {
       const { ballId, componentId } = action;
-      const expectedStep = level.flow[state.currentStepIndex];
+      const expectedBallId = level.placementOrder[state.currentPlacementIndex];
+      const expectedBall = level.balls.find(b => b.id === expectedBallId);
 
-      // Validate: is this the correct ball in the correct component?
-      if (expectedStep && expectedStep.ballId === ballId && expectedStep.component === componentId) {
-        // Correct placement!
+      if (!expectedBall) return state;
+
+      if (ballId === expectedBallId && componentId === expectedBall.target) {
         const newPlaced = { ...state.placedBalls };
         if (!newPlaced[componentId]) newPlaced[componentId] = [];
         newPlaced[componentId] = [...newPlaced[componentId], ballId];
 
+        const nextPlacementIndex = state.currentPlacementIndex + 1;
+        const allPlaced = nextPlacementIndex >= level.placementOrder.length;
+
         return {
           ...state,
+          currentPlacementIndex: nextPlacementIndex,
           placedBalls: newPlaced,
           remainingBalls: state.remainingBalls.filter(id => id !== ballId),
-          feedback: { type: 'success', ballId, message: 'Correct! 🎉' },
+          feedback: { type: 'success', ballId, message: 'Correct!' },
           totalMoves: state.totalMoves + 1,
-          phase: 'execute', // ready to execute this step
+          allPlaced,
+          phase: allPlaced ? 'ready' : 'drag',
         };
       } else {
-        // Wrong placement
+        let message = 'Try again!';
+        if (ballId !== expectedBallId) {
+          const expectedLabel = expectedBall.label;
+          message = `Place ${expectedLabel} first!`;
+        } else {
+          message = `Wrong component!`;
+        }
         return {
           ...state,
-          feedback: { type: 'error', ballId, message: 'Try again! 🤔' },
+          feedback: { type: 'error', ballId, message },
           wrongMoves: state.wrongMoves + 1,
           totalMoves: state.totalMoves + 1,
         };
       }
     }
 
-    case 'EXECUTE_STEP': {
-      const expectedStep = level.flow[state.currentStepIndex];
-      if (!expectedStep) return state;
+    case 'START_EXECUTION': {
+      if (!state.allPlaced) return state;
+      const firstStep = level.flow[0];
+      if (!firstStep) return state;
 
-      const nextStepIndex = state.currentStepIndex + 1;
-      const isLastStep = nextStepIndex >= level.flow.length;
+      return {
+        ...state,
+        phase: 'animating',
+        currentFlowIndex: 0,
+        currentAnimWaypoint: 0,
+        animatingBall: {
+          ballId: firstStep.ballId,
+          path: firstStep.animationPath,
+          waypointIndex: 0,
+          from: firstStep.animationPath[0],
+          to: firstStep.animationPath.length > 1 ? firstStep.animationPath[1] : firstStep.animationPath[0],
+        },
+        eventLoopActive: false,
+      };
+    }
 
-      // Remove ball from placed, add to executed, add output
-      const newPlaced = { ...state.placedBalls };
-      const comp = expectedStep.component;
-      if (newPlaced[comp]) {
-        newPlaced[comp] = newPlaced[comp].filter(id => id !== expectedStep.ballId);
+    case 'ADVANCE_WAYPOINT': {
+      const currentStep = level.flow[state.currentFlowIndex];
+      if (!currentStep) return state;
+
+      const path = currentStep.animationPath;
+      const nextWaypoint = state.currentAnimWaypoint + 1;
+
+      if (nextWaypoint >= path.length) {
+        return state;
       }
+
+      const isQueueToCallstack = (
+        (path[nextWaypoint - 1] === 'microtask' || path[nextWaypoint - 1] === 'macrotask') &&
+        path[nextWaypoint] === 'callstack'
+      );
+
+      return {
+        ...state,
+        currentAnimWaypoint: nextWaypoint,
+        animatingBall: {
+          ballId: currentStep.ballId,
+          path: path,
+          waypointIndex: nextWaypoint,
+          from: path[nextWaypoint - 1],
+          to: path[nextWaypoint],
+        },
+        eventLoopActive: isQueueToCallstack,
+      };
+    }
+
+    case 'FINISH_FLOW_STEP': {
+      const currentStep = level.flow[state.currentFlowIndex];
+      if (!currentStep) return state;
+
+      const newPlaced = { ...state.placedBalls };
+      Object.keys(newPlaced).forEach(key => {
+        newPlaced[key] = newPlaced[key].filter(id => id !== currentStep.ballId);
+      });
 
       const baseScore = 100;
       const penalty = state.wrongMoves * 10;
       const stepScore = Math.max(baseScore - penalty, 10);
 
+      const nextFlowIndex = state.currentFlowIndex + 1;
+      const isLastStep = nextFlowIndex >= level.flow.length;
+
+      if (isLastStep) {
+        return {
+          ...state,
+          currentFlowIndex: nextFlowIndex,
+          outputs: [...state.outputs, currentStep.output],
+          executedBalls: [...state.executedBalls, currentStep.ballId],
+          placedBalls: newPlaced,
+          score: state.score + stepScore,
+          phase: 'complete',
+          showLevelComplete: true,
+          animatingBall: null,
+          eventLoopActive: false,
+          feedback: null,
+        };
+      }
+
+      const nextStep = level.flow[nextFlowIndex];
       return {
         ...state,
-        currentStepIndex: nextStepIndex,
-        outputs: [...state.outputs, expectedStep.output],
-        executedBalls: [...state.executedBalls, expectedStep.ballId],
+        currentFlowIndex: nextFlowIndex,
+        currentAnimWaypoint: 0,
+        outputs: [...state.outputs, currentStep.output],
+        executedBalls: [...state.executedBalls, currentStep.ballId],
         placedBalls: newPlaced,
         score: state.score + stepScore,
-        phase: isLastStep ? 'complete' : 'drag',
-        showLevelComplete: isLastStep,
+        phase: 'animating',
+        animatingBall: {
+          ballId: nextStep.ballId,
+          path: nextStep.animationPath,
+          waypointIndex: 0,
+          from: nextStep.animationPath[0],
+          to: nextStep.animationPath.length > 1 ? nextStep.animationPath[1] : nextStep.animationPath[0],
+        },
+        eventLoopActive: false,
         feedback: null,
       };
     }
@@ -120,7 +211,9 @@ function gameReducer(state, action) {
       return {
         ...state,
         currentLevelIndex: nextIndex,
-        currentStepIndex: 0,
+        currentPlacementIndex: 0,
+        currentFlowIndex: 0,
+        currentAnimWaypoint: 0,
         phase: 'drag',
         outputs: [],
         placedBalls: {},
@@ -130,6 +223,9 @@ function gameReducer(state, action) {
         showLevelComplete: false,
         wrongMoves: 0,
         totalMoves: 0,
+        animatingBall: null,
+        eventLoopActive: false,
+        allPlaced: false,
       };
     }
 
@@ -137,7 +233,9 @@ function gameReducer(state, action) {
       const lvl = LEVELS[state.currentLevelIndex];
       return {
         ...state,
-        currentStepIndex: 0,
+        currentPlacementIndex: 0,
+        currentFlowIndex: 0,
+        currentAnimWaypoint: 0,
         phase: 'drag',
         outputs: [],
         placedBalls: {},
@@ -147,6 +245,9 @@ function gameReducer(state, action) {
         showLevelComplete: false,
         wrongMoves: 0,
         totalMoves: 0,
+        animatingBall: null,
+        eventLoopActive: false,
+        allPlaced: false,
       };
     }
 
@@ -155,7 +256,6 @@ function gameReducer(state, action) {
   }
 }
 
-// Create Context
 const GameContext = createContext(null);
 
 export function GameProvider({ children }) {
@@ -164,7 +264,18 @@ export function GameProvider({ children }) {
     remainingBalls: LEVELS[0].balls.map(b => b.id),
   });
 
-  // Memoized dispatch wrappers
+  const componentRefs = useRef({});
+
+  const registerComponentRef = useCallback((id, element) => {
+    componentRefs.current[id] = element;
+  }, []);
+
+  const getComponentRect = useCallback((id) => {
+    const el = componentRefs.current[id];
+    if (el) return el.getBoundingClientRect();
+    return null;
+  }, []);
+
   const initLevel = useCallback((levelIndex) => {
     dispatch({ type: 'INIT_LEVEL', levelIndex });
   }, []);
@@ -173,8 +284,16 @@ export function GameProvider({ children }) {
     dispatch({ type: 'PLACE_BALL', ballId, componentId });
   }, []);
 
-  const executeStep = useCallback(() => {
-    dispatch({ type: 'EXECUTE_STEP' });
+  const startExecution = useCallback(() => {
+    dispatch({ type: 'START_EXECUTION' });
+  }, []);
+
+  const advanceWaypoint = useCallback(() => {
+    dispatch({ type: 'ADVANCE_WAYPOINT' });
+  }, []);
+
+  const finishFlowStep = useCallback(() => {
+    dispatch({ type: 'FINISH_FLOW_STEP' });
   }, []);
 
   const clearFeedback = useCallback(() => {
@@ -196,7 +315,20 @@ export function GameProvider({ children }) {
   const value = {
     ...state,
     level: LEVELS[state.currentLevelIndex],
-    actions: { initLevel, placeBall, executeStep, clearFeedback, nextLevel, resetLevel, setPhase },
+    componentRefs,
+    registerComponentRef,
+    getComponentRect,
+    actions: {
+      initLevel,
+      placeBall,
+      startExecution,
+      advanceWaypoint,
+      finishFlowStep,
+      clearFeedback,
+      nextLevel,
+      resetLevel,
+      setPhase,
+    },
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

@@ -1,21 +1,28 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useGame } from '../game/useGameStore';
 import { LEVELS } from '../game/levels';
 
-/**
- * GameControls — Execute button, level tabs, score display, reset button
- */
 export default function GameControls() {
-  const { level, phase, score, currentLevelIndex, actions } = useGame();
+  const { level, phase, score, currentLevelIndex, allPlaced, actions } = useGame();
 
-  const canExecute = phase === 'execute';
+  const canExecute = phase === 'ready' && allPlaced;
+  const isAnimating = phase === 'animating';
   const isComplete = phase === 'complete';
+
+  const handleExecute = () => {
+    if (canExecute) {
+      actions.startExecution();
+    }
+  };
+
+  let buttonLabel = 'Place a ball';
+  if (canExecute) buttonLabel = 'Execute';
+  else if (isAnimating) buttonLabel = 'Running...';
+  else if (isComplete) buttonLabel = 'Done!';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Level Tabs + Score */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        {/* Level Tabs */}
         {LEVELS.map((lvl, i) => (
           <motion.button
             key={lvl.id}
@@ -23,6 +30,7 @@ export default function GameControls() {
             onClick={() => actions.initLevel(i)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            disabled={isAnimating}
             style={{
               color: i === currentLevelIndex ? 'var(--color-text)' : 'var(--color-text-dim)',
               background: i === currentLevelIndex
@@ -34,7 +42,6 @@ export default function GameControls() {
           </motion.button>
         ))}
 
-        {/* Score */}
         <div style={{ marginLeft: 'auto' }}>
           <motion.span
             className="score-badge"
@@ -43,12 +50,11 @@ export default function GameControls() {
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 500 }}
           >
-            ⭐ {score}
+            {score}
           </motion.span>
         </div>
       </div>
 
-      {/* Level Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <motion.h2
           key={level.id}
@@ -67,21 +73,19 @@ export default function GameControls() {
         </motion.h2>
       </div>
 
-      {/* Description */}
       <p style={{ fontSize: 13, color: 'var(--color-text-dim)', margin: 0, lineHeight: 1.4 }}>
         {level.description}
       </p>
 
-      {/* Action Buttons */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <motion.button
           className="btn-execute"
-          onClick={actions.executeStep}
+          onClick={handleExecute}
           disabled={!canExecute}
           whileHover={canExecute ? { scale: 1.05 } : {}}
           whileTap={canExecute ? { scale: 0.95 } : {}}
         >
-          {canExecute ? '▶ Execute' : isComplete ? '✅ Done!' : '⏳ Place a ball'}
+          {canExecute ? '\u25B6 ' : ''}{buttonLabel}
         </motion.button>
 
         <motion.button
@@ -89,8 +93,9 @@ export default function GameControls() {
           onClick={actions.resetLevel}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          disabled={isAnimating}
         >
-          🔄 Reset
+          Reset
         </motion.button>
       </div>
     </div>
