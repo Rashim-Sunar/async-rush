@@ -7,16 +7,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/game" element={<GameWrapper />} />
+        <Route path="/game" element={<Game />} />
       </Routes>
     </BrowserRouter>
-  );
-}
-
-function GameWrapper() {
-  return (
-    <GameProvider>
-      <GameBoard />
-    </GameProvider>
   );
 }
