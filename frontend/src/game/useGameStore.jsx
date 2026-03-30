@@ -23,7 +23,7 @@ const initialState = {
 };
 
 function getLevel(state) {
-  return LEVELS[state.currentLevelIndex];
+  return state.customLevel || LEVELS[state.currentLevelIndex];
 }
 
 function gameReducer(state, action) {
@@ -251,7 +251,7 @@ function gameReducer(state, action) {
     }
 
     case 'RESET_LEVEL': {
-      const lvl = LEVELS[state.currentLevelIndex];
+      const lvl = state.customLevel || LEVELS[state.currentLevelIndex];
       return {
         ...state,
         currentPlacementIndex: 0,
@@ -280,10 +280,12 @@ function gameReducer(state, action) {
 
 const GameContext = createContext(null);
 
-export function GameProvider({ children }) {
+export function GameProvider({ children, initialLevel }) {
+  const startLevel = initialLevel || LEVELS[0];
   const [state, dispatch] = useReducer(gameReducer, {
     ...initialState,
-    remainingBalls: LEVELS[0].balls.map(b => b.id),
+    customLevel: initialLevel || null,
+    remainingBalls: startLevel.balls.map(b => b.id),
   });
 
   const componentRefs = useRef({});
@@ -336,7 +338,7 @@ export function GameProvider({ children }) {
 
   const value = {
     ...state,
-    level: LEVELS[state.currentLevelIndex],
+    level: state.customLevel || LEVELS[state.currentLevelIndex],
     componentRefs,
     registerComponentRef,
     getComponentRect,

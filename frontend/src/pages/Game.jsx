@@ -1,9 +1,11 @@
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback, Suspense } from 'react';
+import { useState, useCallback, Suspense, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { GameProvider, useGame } from '../game/useGameStore';
 import { ENGINE_COMPONENTS } from '../game/levels';
+import { ALL_LEVELS } from '../game/allLevels';
 
 import CodePanel from '../components/CodePanel';
 import OutputPanel from '../components/OutputPanel';
@@ -17,21 +19,50 @@ import EventLoopWidget from '../components/EventLoopWidget';
 import FlowAnimation from '../components/FlowAnimation';
 import EngineScene from '../scene/EngineScene';
 
+// Resolve which level to load from URL params
+function resolveLevelFromParams(searchParams) {
+  const levelId = searchParams.get('levelId');
+  const difficulty = searchParams.get('difficulty') || 'easy';
+  if (levelId && ALL_LEVELS[difficulty]) {
+    const found = ALL_LEVELS[difficulty].find(l => l.id === levelId);
+    if (found) return { level: found, difficulty, levelNum: ALL_LEVELS[difficulty].indexOf(found) };
+  }
+  return null;
+}
+
 export default function Game() {
+  const [searchParams] = useSearchParams();
+  const resolved = resolveLevelFromParams(searchParams);
   return (
-    <GameProvider>
-      <GameBoard />
+    <GameProvider initialLevel={resolved?.level}>
+      <GameBoard resolved={resolved} />
     </GameProvider>
   );
 }
 
-function GameBoard() {
+function GameBoard({ resolved }) {
   const {
     level, phase, remainingBalls, actions,
     currentFlowIndex, currentAnimWaypoint, animatingBall
   } = useGame();
 
+  const navigate = useNavigate();
   const [activeBall, setActiveBall] = useState(null);
+
+  // Save progress to localStorage when level completes
+  useEffect(() => {
+    if (phase === 'complete' && resolved) {
+      const { difficulty, levelNum } = resolved;
+      try {
+        const raw = localStorage.getItem('asyncrush_progress');
+        const prog = raw ? JSON.parse(raw) : { easy: 0, medium: 0, hard: 0 };
+        if (levelNum + 1 > (prog[difficulty] || 0)) {
+          prog[difficulty] = levelNum + 1;
+          localStorage.setItem('asyncrush_progress', JSON.stringify(prog));
+        }
+      } catch {}
+    }
+  }, [phase, resolved]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -136,6 +167,17 @@ function GameBoard() {
           }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <motion.button
+                  onClick={() => navigate('/levels')}
+                  whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}
+                  style={{
+                    background: 'rgba(167,139,250,0.1)',
+                    border: '1px solid rgba(167,139,250,0.25)',
+                    borderRadius: 10, padding: '5px 12px',
+                    color: 'var(--color-text-dim)', fontWeight: 700, fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >← Levels</motion.button>
                 <motion.span
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}

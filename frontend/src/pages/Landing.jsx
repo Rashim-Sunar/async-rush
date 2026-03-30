@@ -299,7 +299,7 @@ export default function Landing() {
 
         {/* CTA button — delay 1.1, sonar ping */}
         <motion.button
-          onClick={() => navigate('/game')}
+          onClick={() => navigate('/levels')}
           initial={{ opacity: 0, y: 20 }}
           animate={{
             opacity: 1,
