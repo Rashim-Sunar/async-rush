@@ -58,11 +58,20 @@ export default function FlowAnimation() {
     const nextWaypoint = currentAnimWaypoint + 1;
 
     if (nextWaypoint < path.length) {
-      setTimeout(() => actions.advanceWaypoint(), 300);
+      setTimeout(() => actions.advanceWaypoint(), 600);
     } else {
-      setTimeout(() => actions.finishFlowStep(), 400);
+      setTimeout(() => actions.finishFlowStep(), 1200);
     }
   }, [animatingBall, level, currentFlowIndex, currentAnimWaypoint, actions]);
+
+  useEffect(() => {
+    if (phase !== 'animating' || !animatingBall) return;
+    const isSameSpot = animatingBall.from === animatingBall.to;
+    if (isSameSpot) {
+      const timer = setTimeout(() => handleAnimationComplete(), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, animatingBall, handleAnimationComplete]);
 
   if (phase !== 'animating' || !animatingBall || !fromPos || !toPos || !ballData) {
     return null;
@@ -72,7 +81,6 @@ export default function FlowAnimation() {
   const isSameSpot = animatingBall.from === animatingBall.to;
 
   if (isSameSpot) {
-    setTimeout(() => handleAnimationComplete(), 600);
     return (
       <div className="flow-animation-overlay">
         <motion.div
