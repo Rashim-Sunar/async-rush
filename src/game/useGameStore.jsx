@@ -19,6 +19,7 @@ const initialState = {
   animatingBall: null,
   eventLoopActive: false,
   allPlaced: false,
+  scheduledBalls: [],
 };
 
 function getLevel(state) {
@@ -49,6 +50,7 @@ function gameReducer(state, action) {
         animatingBall: null,
         eventLoopActive: false,
         allPlaced: false,
+        scheduledBalls: [],
       };
     }
 
@@ -103,11 +105,11 @@ function gameReducer(state, action) {
         ...state,
         phase: 'animating',
         currentFlowIndex: 0,
-        currentAnimWaypoint: 0,
+        currentAnimWaypoint: firstStep.animationPath.length > 1 ? 1 : 0,
         animatingBall: {
           ballId: firstStep.ballId,
           path: firstStep.animationPath,
-          waypointIndex: 0,
+          waypointIndex: firstStep.animationPath.length > 1 ? 1 : 0,
           from: firstStep.animationPath[0],
           to: firstStep.animationPath.length > 1 ? firstStep.animationPath[1] : firstStep.animationPath[0],
         },
@@ -150,13 +152,29 @@ function gameReducer(state, action) {
       if (!currentStep) return state;
 
       const newPlaced = { ...state.placedBalls };
-      Object.keys(newPlaced).forEach(key => {
-        newPlaced[key] = newPlaced[key].filter(id => id !== currentStep.ballId);
-      });
+      let newlyScheduled = [...state.scheduledBalls];
+      let newOutputs = [...state.outputs];
+      let newExecuted = [...state.executedBalls];
+      let scoreAdd = 0;
 
-      const baseScore = 100;
-      const penalty = state.wrongMoves * 10;
-      const stepScore = Math.max(baseScore - penalty, 10);
+      if (currentStep.type === 'schedule') {
+        newlyScheduled.push(currentStep.ballId);
+      } else {
+        // execute
+        Object.keys(newPlaced).forEach(key => {
+          newPlaced[key] = newPlaced[key].filter(id => id !== currentStep.ballId);
+        });
+        newlyScheduled = newlyScheduled.filter(id => id !== currentStep.ballId);
+        
+        if (currentStep.output) {
+          newOutputs.push(currentStep.output);
+        }
+        newExecuted.push(currentStep.ballId);
+        
+        const baseScore = 100;
+        const penalty = state.wrongMoves * 10;
+        scoreAdd = Math.max(baseScore - penalty, 10);
+      }
 
       const nextFlowIndex = state.currentFlowIndex + 1;
       const isLastStep = nextFlowIndex >= level.flow.length;
@@ -165,10 +183,11 @@ function gameReducer(state, action) {
         return {
           ...state,
           currentFlowIndex: nextFlowIndex,
-          outputs: [...state.outputs, currentStep.output],
-          executedBalls: [...state.executedBalls, currentStep.ballId],
+          outputs: newOutputs,
+          executedBalls: newExecuted,
           placedBalls: newPlaced,
-          score: state.score + stepScore,
+          scheduledBalls: newlyScheduled,
+          score: state.score + scoreAdd,
           phase: 'complete',
           showLevelComplete: true,
           animatingBall: null,
@@ -181,16 +200,17 @@ function gameReducer(state, action) {
       return {
         ...state,
         currentFlowIndex: nextFlowIndex,
-        currentAnimWaypoint: 0,
-        outputs: [...state.outputs, currentStep.output],
-        executedBalls: [...state.executedBalls, currentStep.ballId],
+        currentAnimWaypoint: nextStep.animationPath.length > 1 ? 1 : 0,
+        outputs: newOutputs,
+        executedBalls: newExecuted,
         placedBalls: newPlaced,
-        score: state.score + stepScore,
+        scheduledBalls: newlyScheduled,
+        score: state.score + scoreAdd,
         phase: 'animating',
         animatingBall: {
           ballId: nextStep.ballId,
           path: nextStep.animationPath,
-          waypointIndex: 0,
+          waypointIndex: nextStep.animationPath.length > 1 ? 1 : 0,
           from: nextStep.animationPath[0],
           to: nextStep.animationPath.length > 1 ? nextStep.animationPath[1] : nextStep.animationPath[0],
         },
@@ -226,6 +246,7 @@ function gameReducer(state, action) {
         animatingBall: null,
         eventLoopActive: false,
         allPlaced: false,
+        scheduledBalls: [],
       };
     }
 
@@ -248,6 +269,7 @@ function gameReducer(state, action) {
         animatingBall: null,
         eventLoopActive: false,
         allPlaced: false,
+        scheduledBalls: [],
       };
     }
 

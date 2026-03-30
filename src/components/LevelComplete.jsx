@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../game/useGameStore';
 import { LEVELS } from '../game/levels';
+import { useEffect, useState } from 'react';
 
 /**
  * LevelComplete — victory overlay with confetti animation and progression
@@ -12,9 +13,20 @@ export default function LevelComplete() {
   // Star rating based on wrong moves
   const stars = wrongMoves === 0 ? 3 : wrongMoves <= 2 ? 2 : 1;
 
+  const [showDelayed, setShowDelayed] = useState(false);
+
+  useEffect(() => {
+    if (showLevelComplete) {
+      const timer = setTimeout(() => setShowDelayed(true), 1500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowDelayed(false);
+    }
+  }, [showLevelComplete]);
+
   return (
     <AnimatePresence>
-      {showLevelComplete && (
+      {showDelayed && (
         <motion.div
           className="overlay"
           initial={{ opacity: 0 }}

@@ -28,6 +28,7 @@ export default function App() {
 function GameBoard() {
   const {
     level, phase, remainingBalls, actions,
+    currentFlowIndex, currentAnimWaypoint, animatingBall
   } = useGame();
 
   const [activeBall, setActiveBall] = useState(null);
@@ -156,10 +157,6 @@ function GameBoard() {
               </div>
               <GameControls />
             </div>
-
-            <div style={{ flexShrink: 0 }}>
-              <HintBubble />
-            </div>
           </div>
 
           <div style={{
@@ -170,6 +167,7 @@ function GameBoard() {
           }}>
             <CodePanel />
             <OutputPanel />
+            <HintBubble />
           </div>
 
           <div style={{
@@ -302,8 +300,8 @@ function GameBoard() {
                     style={{ fontSize: 13, color: 'var(--color-text-dim)' }}
                   >
                     {phase === 'complete' ? '🎉 All done!' :
-                     phase === 'ready' ? '✅ Ready to execute!' :
-                     phase === 'animating' ? '⚡ Running...' : '⏳ Place all balls...'}
+                      phase === 'ready' ? '✅ Ready to execute!' :
+                        phase === 'animating' ? '⚡ Running...' : '⏳ Place all balls...'}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -313,7 +311,7 @@ function GameBoard() {
 
         <FeedbackOverlay />
         <LevelComplete />
-        <FlowAnimation />
+        <FlowAnimation key={`flow-${currentFlowIndex}-${currentAnimWaypoint}-${animatingBall?.ballId || 'none'}`} />
 
         <DragOverlay dropAnimation={{
           duration: 200,

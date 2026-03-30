@@ -6,7 +6,7 @@ import TaskBall from './TaskBall';
 
 export default function EngineComponent({ component }) {
   const { id, label, color, borderColor, bgColor } = component;
-  const { placedBalls, level, registerComponentRef, animatingBall, phase } = useGame();
+  const { placedBalls, scheduledBalls, level, registerComponentRef, animatingBall, phase } = useGame();
   const containerRef = useRef(null);
 
   const { isOver, setNodeRef } = useDroppable({ id });
@@ -23,7 +23,13 @@ export default function EngineComponent({ component }) {
   };
 
   const ballIds = placedBalls[id] || [];
-  const balls = ballIds.map(bid => level.balls.find(b => b.id === bid)).filter(Boolean);
+  const balls = ballIds
+    .map(bid => level.balls.find(b => b.id === bid))
+    .filter(Boolean)
+    .filter(b => {
+      if (phase === 'drag' || phase === 'ready') return true;
+      return scheduledBalls.includes(b.id);
+    });
 
   const isReceiving = animatingBall && animatingBall.to === id && phase === 'animating';
   const isSending = animatingBall && animatingBall.from === id && phase === 'animating';
