@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* ===== CUSTOM THEME ===== */
 :root {
   --color-bg: #0f0a2e;
   --color-bg-card: rgba(30, 20, 70, 0.85);
@@ -30,19 +29,16 @@ html, body, #root {
   color: var(--color-text);
 }
 
-/* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.3); border-radius: 3px; }
 
-/* ===== GLOW EFFECTS ===== */
 .glow-green { filter: drop-shadow(0 0 12px rgba(74, 222, 128, 0.6)); }
 .glow-purple { filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.6)); }
 .glow-blue { filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.6)); }
 .glow-yellow { filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.6)); }
 .glow-pink { filter: drop-shadow(0 0 12px rgba(244, 114, 182, 0.6)); }
 
-/* ===== GLASS CARD ===== */
 .glass-card {
   background: var(--color-bg-card);
   backdrop-filter: blur(16px);
@@ -50,7 +46,6 @@ html, body, #root {
   border-radius: 20px;
 }
 
-/* ===== ENGINE COMPONENT BOX ===== */
 .engine-box {
   border-radius: 20px;
   padding: 12px;
@@ -63,8 +58,15 @@ html, body, #root {
   transform: scale(1.03);
   box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
 }
+.engine-box.receiving {
+  animation: pulse-border 0.8s ease-in-out infinite;
+}
 
-/* ===== BALL STYLES ===== */
+@keyframes pulse-border {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.3); }
+}
+
 .task-ball {
   width: 56px;
   height: 56px;
@@ -99,7 +101,6 @@ html, body, #root {
   color: #1e3a5f;
 }
 
-/* ===== CODE PANEL ===== */
 .code-line {
   font-family: var(--font-code);
   font-size: 13px;
@@ -116,7 +117,6 @@ html, body, #root {
   border-left-color: var(--color-accent);
 }
 
-/* ===== OUTPUT TERMINAL ===== */
 .terminal {
   font-family: var(--font-code);
   font-size: 13px;
@@ -137,7 +137,6 @@ html, body, #root {
   border-radius: 50%;
 }
 
-/* ===== HINT BUBBLE ===== */
 .hint-bubble {
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(244, 114, 182, 0.15));
   border: 1px solid rgba(251, 191, 36, 0.3);
@@ -158,7 +157,6 @@ html, body, #root {
   transform: rotate(45deg);
 }
 
-/* ===== BUTTON ===== */
 .btn-execute {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: #451a03;
@@ -201,8 +199,12 @@ html, body, #root {
   background: rgba(167, 139, 250, 0.25);
   transform: translateY(-1px);
 }
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
 
-/* ===== LEVEL COMPLETE OVERLAY ===== */
 .overlay {
   position: fixed;
   inset: 0;
@@ -214,7 +216,6 @@ html, body, #root {
   z-index: 100;
 }
 
-/* ===== SCORE BADGE ===== */
 .score-badge {
   background: linear-gradient(135deg, #fbbf24, #f97316);
   color: #451a03;
@@ -225,7 +226,6 @@ html, body, #root {
   box-shadow: 0 2px 12px rgba(251, 191, 36, 0.3);
 }
 
-/* ===== LEVEL TABS ===== */
 .level-tab {
   padding: 6px 16px;
   border-radius: 12px;
@@ -241,6 +241,117 @@ html, body, #root {
 }
 .level-tab:hover:not(.active) {
   background: rgba(167, 139, 250, 0.1);
+}
+.level-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== EVENT LOOP WIDGET ===== */
+.event-loop-widget {
+  width: 140px;
+  height: 140px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-loop-center {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(30, 20, 70, 0.95), rgba(50, 30, 90, 0.95));
+  border: 2.5px solid rgba(251, 191, 36, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.event-loop-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #fbbf24;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.event-loop-icon {
+  font-size: 16px;
+  color: #fbbf24;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.event-loop-pulse-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid rgba(251, 191, 36, 0.4);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===== FLOW ANIMATION ===== */
+.flow-animation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.flow-trail-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.flow-ball {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 51;
+}
+
+.flow-ball-shine {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  width: 15px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+  pointer-events: none;
+}
+
+.flow-ball-label {
+  position: relative;
+  z-index: 2;
+  font-weight: 800;
+  font-size: 9px;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.flow-waypoint-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(251, 191, 36, 0.8);
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  pointer-events: none;
+  z-index: 52;
 }
 
 /* ===== ANIMATIONS ===== */

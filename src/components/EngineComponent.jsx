@@ -1,37 +1,49 @@
 import { useDroppable } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../game/useGameStore';
+import { useEffect, useRef } from 'react';
 import TaskBall from './TaskBall';
 
-/**
- * EngineComponent — drop zone for task balls (Call Stack, Web API, Queues)
- * Shows placed balls inside with visual feedback
- */
 export default function EngineComponent({ component }) {
   const { id, label, color, borderColor, bgColor } = component;
-  const { placedBalls, level } = useGame();
+  const { placedBalls, level, registerComponentRef, animatingBall, phase } = useGame();
+  const containerRef = useRef(null);
 
   const { isOver, setNodeRef } = useDroppable({ id });
 
-  // Get balls placed in this component
+  useEffect(() => {
+    if (containerRef.current) {
+      registerComponentRef(id, containerRef.current);
+    }
+  }, [id, registerComponentRef]);
+
+  const setRefs = (el) => {
+    containerRef.current = el;
+    setNodeRef(el);
+  };
+
   const ballIds = placedBalls[id] || [];
   const balls = ballIds.map(bid => level.balls.find(b => b.id === bid)).filter(Boolean);
 
+  const isReceiving = animatingBall && animatingBall.to === id && phase === 'animating';
+  const isSending = animatingBall && animatingBall.from === id && phase === 'animating';
+
   return (
     <motion.div
-      ref={setNodeRef}
-      className={`engine-box ${isOver ? 'is-over' : ''}`}
+      ref={setRefs}
+      className={`engine-box ${isOver ? 'is-over' : ''} ${isReceiving ? 'receiving' : ''}`}
       style={{
         background: bgColor,
         border: `2px solid ${borderColor}`,
         boxShadow: isOver
           ? `0 0 30px ${borderColor}, inset 0 0 20px ${bgColor}`
+          : isReceiving
+          ? `0 0 25px ${color}40, inset 0 0 15px ${bgColor}`
           : `0 0 12px ${borderColor.replace('0.4', '0.15')}`,
       }}
-      animate={isOver ? { scale: 1.04 } : { scale: 1 }}
+      animate={isOver ? { scale: 1.04 } : isReceiving ? { scale: 1.02 } : { scale: 1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 20 }}
     >
-      {/* Label */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -50,7 +62,6 @@ export default function EngineComponent({ component }) {
         </span>
       </div>
 
-      {/* Placed Balls */}
       <div style={{
         display: 'flex',
         gap: 6,
@@ -64,7 +75,10 @@ export default function EngineComponent({ component }) {
             <motion.div
               key={ball.id}
               initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              animate={{
+                scale: 1,
+                opacity: isSending && animatingBall.ballId === ball.id ? 0.4 : 1,
+              }}
               exit={{ scale: 0, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 500, damping: 20 }}
             >
@@ -77,7 +91,6 @@ export default function EngineComponent({ component }) {
                   cursor: 'default',
                 }}
               >
-                {/* Shine */}
                 <div style={{
                   position: 'absolute',
                   top: 4,
@@ -97,7 +110,6 @@ export default function EngineComponent({ component }) {
           ))}
         </AnimatePresence>
 
-        {/* Empty state */}
         {balls.length === 0 && (
           <motion.span
             animate={{ opacity: [0.3, 0.6, 0.3] }}
@@ -109,10 +121,26 @@ export default function EngineComponent({ component }) {
               opacity: 0.4,
             }}
           >
-            {isOver ? '✨ Drop here!' : 'Drop tasks here'}
+            {isOver ? 'Drop here!' : 'Drop tasks here'}
           </motion.span>
         )}
       </div>
+
+      {isReceiving && (
+        <motion.div
+          className="component-arrival-flash"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.4, 0] }}
+          transition={{ duration: 0.8, repeat: Infinity }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 20,
+            background: `radial-gradient(circle, ${color}20 0%, transparent 70%)`,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
     </motion.div>
   );
 }
