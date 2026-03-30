@@ -8,7 +8,7 @@ import * as THREE from 'three';
  */
 export default function FloatingParticles() {
   const meshRef = useRef();
-  const count = 60;
+  const count = 160;
 
   // Generate random positions and properties
   const { positions, colors, sizes } = useMemo(() => {

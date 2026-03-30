@@ -55,7 +55,7 @@ export default function EngineScene({ phase }) {
           enablePan={false}
           enableRotate={false}
           autoRotate
-          autoRotateSpeed={0.3}
+          autoRotateSpeed={0.12}
         />
       </Canvas>
     </div>

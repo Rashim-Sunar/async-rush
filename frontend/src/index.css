@@ -370,3 +370,57 @@ html, body, #root {
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+
+/* ===== LANDING — HERO TITLE (animated gradient + letter-spacing pulse) ===== */
+.hero-title {
+  background: linear-gradient(
+    270deg,
+    #FF6B6B, #FFD93D, #C77DFF, #4ECDC4, #FF6B6B
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-cycle 5s ease infinite, letter-spacing-pulse 3s ease-in-out infinite;
+}
+
+@keyframes gradient-cycle {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes letter-spacing-pulse {
+  0%, 100% { letter-spacing: 2px; }
+  50%       { letter-spacing: 6px; }
+}
+
+/* ===== LANDING — CTA BUTTON ===== */
+.btn-cta {
+  transition: filter 0.2s ease;
+}
+.btn-cta:hover {
+  filter: brightness(1.15);
+}
+
+/* ===== LANDING — FLOATING DEBRIS ===== */
+@keyframes debris-1 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-32px) rotate(160deg); }
+}
+@keyframes debris-2 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(38px) rotate(-110deg); }
+}
+@keyframes debris-3 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-22px) rotate(80deg); }
+}
+@keyframes debris-4 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(28px) rotate(200deg); }
+}
+@keyframes debris-5 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-28px) rotate(-70deg); }
+}
