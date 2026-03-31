@@ -4,7 +4,7 @@ import { useState, useCallback, Suspense, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { GameProvider, useGame } from '../game/useGameStore';
-import { ENGINE_COMPONENTS } from '../game/levels';
+import { ENGINE_COMPONENTS, TYPE_COLORS } from '../game/levels';
 import { ALL_LEVELS } from '../game/allLevels';
 
 import CodePanel from '../components/CodePanel';
@@ -352,19 +352,10 @@ function GameBoard({ resolved }) {
 
             <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid rgba(167, 139, 250, 0.15)' }}>
               <span style={{ fontWeight: 700, fontSize: 11, color: 'var(--color-text-dim)', letterSpacing: 1, display: 'block', marginBottom: 8 }}>
-                TASK TYPES
+                TASK COLORS
               </span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[
-                  { color: '#4ade80', label: 'Sync \u2192 Call Stack', emoji: '🟢' },
-                  { color: '#c084fc', label: 'Promise \u2192 Microtask', emoji: '🟣' },
-                  { color: '#60a5fa', label: 'setTimeout \u2192 Macrotask', emoji: '🔵' },
-                ].map((item) => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
-                    <span>{item.emoji}</span>
-                    <span style={{ color: item.color }}>{item.label}</span>
-                  </div>
-                ))}
+              <div style={{ fontSize: 11, color: 'var(--color-text-dim)', lineHeight: 1.6 }}>
+                Colors are randomized per level.
               </div>
             </div>
           </div>
@@ -464,8 +455,14 @@ function GameBoard({ resolved }) {
         }}>
           {activeBall && (
             <div
-              className={`task-ball ${activeBall.type}`}
-              style={{ cursor: 'grabbing', transform: 'scale(1.15)' }}
+              className="task-ball"
+              style={{
+                cursor: 'grabbing',
+                transform: 'scale(1.15)',
+                background: `radial-gradient(circle at 35% 35%, ${(activeBall.colorStyle || TYPE_COLORS[activeBall.type]).bg}, ${(activeBall.colorStyle || TYPE_COLORS[activeBall.type]).dark})`,
+                boxShadow: `0 0 20px ${(activeBall.colorStyle || TYPE_COLORS[activeBall.type]).glow}, inset 0 -4px 8px rgba(0,0,0,0.2)`,
+                color: '#ffffff',
+              }}
             >
               <div style={{
                 position: 'absolute',
@@ -478,7 +475,15 @@ function GameBoard({ resolved }) {
                 transform: 'rotate(-30deg)',
                 pointerEvents: 'none',
               }} />
-              <span style={{ position: 'relative', zIndex: 2, fontWeight: 800 }}>
+              <span
+                style={{
+                  position: 'relative',
+                  zIndex: 2,
+                  fontWeight: 400,
+                  textShadow: '0 1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
+                  letterSpacing: 0.2,
+                }}
+              >
                 {activeBall.label}
               </span>
             </div>

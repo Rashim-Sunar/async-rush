@@ -77,7 +77,7 @@ export default function FlowAnimation() {
     return null;
   }
 
-  const colors = TYPE_COLORS[ballData.type];
+  const colors = ballData.colorStyle || TYPE_COLORS[ballData.type];
   const isSameSpot = animatingBall.from === animatingBall.to;
 
   if (isSameSpot) {

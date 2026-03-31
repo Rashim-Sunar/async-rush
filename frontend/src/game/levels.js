@@ -111,9 +111,65 @@ export const TYPE_COLORS = {
   timeout: { bg: '#60a5fa', glow: 'rgba(96, 165, 250, 0.5)', dark: '#1e3a5f' },
 };
 
+export const TASK_COLOR_POOL = [
+  { bg: '#4ade80', glow: 'rgba(74, 222, 128, 0.5)', dark: '#052e16' },
+  { bg: '#c084fc', glow: 'rgba(192, 132, 252, 0.5)', dark: '#3b0764' },
+  { bg: '#60a5fa', glow: 'rgba(96, 165, 250, 0.5)', dark: '#1e3a5f' },
+  { bg: '#f472b6', glow: 'rgba(244, 114, 182, 0.5)', dark: '#831843' },
+  { bg: '#f59e0b', glow: 'rgba(245, 158, 11, 0.5)', dark: '#451a03' },
+  { bg: '#2dd4bf', glow: 'rgba(45, 212, 191, 0.5)', dark: '#042f2e' },
+];
+
+function shuffleArray(items) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+export function createRandomBallColorMap(level) {
+  const shuffledPool = shuffleArray(TASK_COLOR_POOL);
+
+  return level.balls.reduce((acc, ball, index) => {
+    acc[ball.id] = shuffledPool[index % shuffledPool.length];
+    return acc;
+  }, {});
+}
+
+export function applyBallColorsToLevel(level, ballColors) {
+  const findBallColorForLine = (lineText) => {
+    const loweredLine = lineText.toLowerCase();
+    const matchedBall = level.balls.find((ball) => {
+      const cleanLabel = ball.label.replace(/"/g, '').toLowerCase();
+      return cleanLabel && loweredLine.includes(cleanLabel);
+    });
+
+    if (matchedBall) {
+      return ballColors[matchedBall.id];
+    }
+
+    const randomIndex = Math.floor(Math.random() * TASK_COLOR_POOL.length);
+    return TASK_COLOR_POOL[randomIndex];
+  };
+
+  return {
+    ...level,
+    code: level.code.map((line) => ({
+      ...line,
+      color: findBallColorForLine(line.text).bg,
+    })),
+    balls: level.balls.map((ball) => ({
+      ...ball,
+      colorStyle: ballColors[ball.id] || TYPE_COLORS[ball.type],
+    })),
+  };
+}
+
 export const ENGINE_COMPONENTS = [
-  { id: 'callstack', label: 'Call Stack', color: '#4ade80', borderColor: 'rgba(74, 222, 128, 0.4)', bgColor: 'rgba(74, 222, 128, 0.08)' },
+  { id: 'callstack', label: 'Call Stack', color: '#2dd4bf', borderColor: 'rgba(45, 212, 191, 0.4)', bgColor: 'rgba(45, 212, 191, 0.08)' },
   { id: 'webapi', label: 'Web API', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)', bgColor: 'rgba(251, 191, 36, 0.08)' },
-  { id: 'microtask', label: 'Microtask Queue', color: '#c084fc', borderColor: 'rgba(192, 132, 252, 0.4)', bgColor: 'rgba(192, 132, 252, 0.08)' },
-  { id: 'macrotask', label: 'Macrotask Queue', color: '#60a5fa', borderColor: 'rgba(96, 165, 250, 0.4)', bgColor: 'rgba(96, 165, 250, 0.08)' },
+  { id: 'microtask', label: 'Microtask Queue', color: '#fb7185', borderColor: 'rgba(251, 113, 133, 0.4)', bgColor: 'rgba(251, 113, 133, 0.08)' },
+  { id: 'macrotask', label: 'Macrotask Queue', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)', bgColor: 'rgba(56, 189, 248, 0.08)' },
 ];
