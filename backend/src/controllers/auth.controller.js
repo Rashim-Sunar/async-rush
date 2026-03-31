@@ -70,7 +70,9 @@ export const logoutUser = asyncHandler(async (req, res) => {
     // Clear the HTTP Only cookie by setting it to empty with expiring immediately
     res.cookie('jwt', '', {
         httpOnly: true,
-        expires: new Date(0), // Expire instantly
+        secure: process.env.NODE_ENV !== 'development',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        expires: new Date(0),
     });
 
     return successResponse(res, 200, 'User logged out successfully');
