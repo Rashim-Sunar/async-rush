@@ -10,8 +10,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // target: 'http://localhost:8000', // Use this for develoopment
-        target:'https://async-rush-backend.onrender.com', // Use this for production
+        target: 'http://localhost:8000', // Use this for develoopment
+        // target:'https://async-rush-backend.onrender.com', // Use this for production
         changeOrigin: true,
         secure: false,
       },

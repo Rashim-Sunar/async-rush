@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ALL_LEVELS } from '../game/allLevels';
@@ -57,6 +58,8 @@ export default function LevelSelect() {
   const [searchParams] = useSearchParams();
   const requestedDifficulty = searchParams.get('difficulty');
   const { user, logout } = useAuth();
+  const { isMobile, isTablet } = useBreakpoint();
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [difficulty, setDifficulty] = useState(
     DIFFICULTIES.includes(requestedDifficulty) ? requestedDifficulty : 'easy'
   );
@@ -404,16 +407,78 @@ export default function LevelSelect() {
         </div>
       </motion.div>
 
+      {/* ── MOBILE: Zone tab bar ── */}
+      {isMobile && (
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          padding: '10px 14px',
+          borderBottom: '1px solid rgba(167,139,250,0.1)',
+          background: 'rgba(15,10,46,0.55)',
+          backdropFilter: 'blur(10px)',
+          flexShrink: 0,
+          position: 'relative', zIndex: 10,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+        }}>
+          {DIFFICULTIES.map(diff => {
+            const unlocked = isDiffUnlocked(diff);
+            const m = DIFF_META[diff];
+            const active = difficulty === diff;
+            return (
+              <button
+                key={diff}
+                onClick={() => unlocked ? setDifficulty(diff) : shake('diff_' + diff)}
+                style={{
+                  flexShrink: 0,
+                  padding: '7px 16px',
+                  borderRadius: 10,
+                  border: `1.5px solid ${active ? m.color : 'rgba(167,139,250,0.15)'}`,
+                  background: active ? `${m.color}20` : 'transparent',
+                  color: active ? m.color : unlocked ? 'var(--color-text)' : 'rgba(167,139,250,0.35)',
+                  fontWeight: 800,
+                  fontSize: 12,
+                  letterSpacing: 1,
+                  cursor: unlocked ? 'pointer' : 'not-allowed',
+                  opacity: unlocked ? 1 : 0.45,
+                  minHeight: 36,
+                }}
+              >
+                {!unlocked && '🔒 '}{m.label}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setRightPanelOpen(v => !v)}
+            style={{
+              marginLeft: 'auto',
+              flexShrink: 0,
+              padding: '7px 12px',
+              borderRadius: 10,
+              border: `1.5px solid ${rightPanelOpen ? meta.color : 'rgba(167,139,250,0.2)'}`,
+              background: rightPanelOpen ? `${meta.color}18` : 'transparent',
+              color: rightPanelOpen ? meta.color : 'var(--color-text-dim)',
+              fontWeight: 700, fontSize: 13, cursor: 'pointer', minHeight: 36,
+            }}
+          >
+            {rightPanelOpen ? '✕' : 'ℹ️'}
+          </button>
+        </div>
+      )}
+
       {/* ── MAIN CONTENT ── */}
       <div style={{
         flex: 1, display: 'flex', overflow: 'hidden',
         position: 'relative', zIndex: 10,
+        flexDirection: isMobile ? 'column' : 'row',
       }}>
 
         {/* ═══ LEFT: Progression Map ═══ */}
         <div style={{
-          flex: '0 0 58%', display: 'flex', flexDirection: 'column',
-          borderRight: '1px solid rgba(167,139,250,0.1)',
+          flex: isMobile ? '1 1 auto' : isTablet ? '0 0 55%' : '0 0 58%',
+          display: 'flex', flexDirection: 'column',
+          borderRight: isMobile ? 'none' : '1px solid rgba(167,139,250,0.1)',
+          display: isMobile && rightPanelOpen ? 'none' : 'flex',
         }}>
           {/* Zone header */}
           <motion.div
@@ -658,14 +723,15 @@ export default function LevelSelect() {
 
         {/* ═══ RIGHT: Zone Selector + Stats ═══ */}
         <div style={{
-          flex: '0 0 42%',
-          display: 'flex', flexDirection: 'column',
-          padding: '24px 28px',
+          flex: isMobile ? '1 1 auto' : isTablet ? '0 0 45%' : '0 0 42%',
+          display: isMobile && !rightPanelOpen ? 'none' : 'flex',
+          flexDirection: 'column',
+          padding: isMobile ? '16px 14px' : '24px 28px',
           gap: 20, overflowY: 'auto',
         }}>
 
-          {/* ZONE selector */}
-          <motion.div
+          {/* ZONE selector — hidden on mobile (replaced by tab bar above) */}
+          {!isMobile && <motion.div
             initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
@@ -789,7 +855,7 @@ export default function LevelSelect() {
                 );
               })}
             </div>
-          </motion.div>
+          </motion.div>}
 
           {/* Stats card */}
           <motion.div
