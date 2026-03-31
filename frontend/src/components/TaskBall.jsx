@@ -1,10 +1,11 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'framer-motion';
+import { TYPE_COLORS } from '../game/levels';
 
 /**
  * TaskBall — draggable colored sphere representing a code task
- * Color-coded by type: sync (green), promise (purple), timeout (blue)
+ * Uses the active level's randomized color mapping so colors are not fixed by task type.
  */
 export default function TaskBall({ ball, isSmall = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -19,18 +20,22 @@ export default function TaskBall({ ball, isSmall = false }) {
   };
 
   const size = isSmall ? 40 : 56;
+  const colors = ball.colorStyle || TYPE_COLORS[ball.type];
 
   return (
     <motion.div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`task-ball ${ball.type}`}
+      className="task-ball"
       style={{
         ...style,
         width: size,
         height: size,
-        fontSize: isSmall ? 8 : 10,
+        fontSize: isSmall ? 9 : 11,
+        background: `radial-gradient(circle at 35% 35%, ${colors.bg}, ${colors.dark})`,
+        boxShadow: `0 0 20px ${colors.glow}, inset 0 -4px 8px rgba(0,0,0,0.2)`,
+        color: '#ffffff',
       }}
       animate={isDragging ? { scale: 1.15 } : { scale: 1 }}
       whileHover={{ scale: 1.12 }}
@@ -49,7 +54,15 @@ export default function TaskBall({ ball, isSmall = false }) {
         transform: 'rotate(-30deg)',
         pointerEvents: 'none',
       }} />
-      <span style={{ position: 'relative', zIndex: 2, fontWeight: 800 }}>
+      <span
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          fontWeight: 400,
+          textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.65)',
+          letterSpacing: 0.2,
+        }}
+      >
         {ball.label}
       </span>
     </motion.div>

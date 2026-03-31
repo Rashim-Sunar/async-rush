@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useCallback, useRef } from 'react';
-import { LEVELS } from './levels';
+import { LEVELS, createRandomBallColorMap, applyBallColorsToLevel } from './levels';
 
 const initialState = {
   currentLevelIndex: 0,
@@ -20,10 +20,18 @@ const initialState = {
   eventLoopActive: false,
   allPlaced: false,
   scheduledBalls: [],
+  ballColors: {},
+  level: null,
 };
 
 function getLevel(state) {
-  return state.customLevel || LEVELS[state.currentLevelIndex];
+  return state.level;
+}
+
+function buildDecoratedLevel(baseLevel) {
+  const ballColors = createRandomBallColorMap(baseLevel);
+  const level = applyBallColorsToLevel(baseLevel, ballColors);
+  return { level, ballColors };
 }
 
 function gameReducer(state, action) {
@@ -31,7 +39,8 @@ function gameReducer(state, action) {
 
   switch (action.type) {
     case 'INIT_LEVEL': {
-      const lvl = LEVELS[action.levelIndex ?? state.currentLevelIndex];
+      const baseLevel = LEVELS[action.levelIndex ?? state.currentLevelIndex];
+      const { level: lvl, ballColors } = buildDecoratedLevel(baseLevel);
       return {
         ...state,
         currentLevelIndex: action.levelIndex ?? state.currentLevelIndex,
@@ -51,6 +60,8 @@ function gameReducer(state, action) {
         eventLoopActive: false,
         allPlaced: false,
         scheduledBalls: [],
+        level: lvl,
+          ballColors,
       };
     }
 
@@ -227,7 +238,7 @@ function gameReducer(state, action) {
 
     case 'NEXT_LEVEL': {
       const nextIndex = Math.min(state.currentLevelIndex + 1, LEVELS.length - 1);
-      const nextLvl = LEVELS[nextIndex];
+      const { level: nextLvl, ballColors } = buildDecoratedLevel(LEVELS[nextIndex]);
       return {
         ...state,
         currentLevelIndex: nextIndex,
@@ -247,11 +258,13 @@ function gameReducer(state, action) {
         eventLoopActive: false,
         allPlaced: false,
         scheduledBalls: [],
+        level: nextLvl,
+        ballColors,
       };
     }
 
     case 'RESET_LEVEL': {
-      const lvl = state.customLevel || LEVELS[state.currentLevelIndex];
+      const lvl = getLevel(state);
       return {
         ...state,
         currentPlacementIndex: 0,
@@ -281,11 +294,14 @@ function gameReducer(state, action) {
 const GameContext = createContext(null);
 
 export function GameProvider({ children, initialLevel }) {
-  const startLevel = initialLevel || LEVELS[0];
+  const baseLevel = initialLevel || LEVELS[0];
+  const { level: startLevel, ballColors } = buildDecoratedLevel(baseLevel);
   const [state, dispatch] = useReducer(gameReducer, {
     ...initialState,
     customLevel: initialLevel || null,
     remainingBalls: startLevel.balls.map(b => b.id),
+    level: startLevel,
+    ballColors,
   });
 
   const componentRefs = useRef({});
@@ -338,7 +354,7 @@ export function GameProvider({ children, initialLevel }) {
 
   const value = {
     ...state,
-    level: state.customLevel || LEVELS[state.currentLevelIndex],
+    level: state.level,
     componentRefs,
     registerComponentRef,
     getComponentRect,

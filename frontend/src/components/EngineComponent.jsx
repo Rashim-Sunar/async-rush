@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../game/useGameStore';
 import { useEffect, useRef } from 'react';
-import TaskBall from './TaskBall';
+import { TYPE_COLORS } from '../game/levels';
 
 export default function EngineComponent({ component }) {
   const { id, label, color, borderColor, bgColor } = component;
@@ -89,12 +89,15 @@ export default function EngineComponent({ component }) {
               transition={{ type: 'spring', stiffness: 500, damping: 20 }}
             >
               <div
-                className={`task-ball ${ball.type}`}
+                className="task-ball"
                 style={{
                   width: 40,
                   height: 40,
-                  fontSize: 8,
+                  fontSize: 9,
                   cursor: 'default',
+                  background: `radial-gradient(circle at 35% 35%, ${(ball.colorStyle || TYPE_COLORS[ball.type]).bg}, ${(ball.colorStyle || TYPE_COLORS[ball.type]).dark})`,
+                  boxShadow: `0 0 20px ${(ball.colorStyle || TYPE_COLORS[ball.type]).glow}, inset 0 -4px 8px rgba(0,0,0,0.2)`,
+                  color: '#ffffff',
                 }}
               >
                 <div style={{
@@ -108,7 +111,15 @@ export default function EngineComponent({ component }) {
                   transform: 'rotate(-30deg)',
                   pointerEvents: 'none',
                 }} />
-                <span style={{ position: 'relative', zIndex: 2, fontWeight: 800 }}>
+                <span
+                  style={{
+                    position: 'relative',
+                    zIndex: 2,
+                    fontWeight: 400,
+                    textShadow: '0 1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)',
+                    letterSpacing: 0.2,
+                  }}
+                >
                   {ball.label}
                 </span>
               </div>
