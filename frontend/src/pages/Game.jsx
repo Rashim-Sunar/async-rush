@@ -34,8 +34,10 @@ function resolveLevelFromParams(searchParams) {
 export default function Game() {
   const [searchParams] = useSearchParams();
   const resolved = resolveLevelFromParams(searchParams);
+  const levelKey = resolved?.level?.id || 'default-level';
+
   return (
-    <GameProvider initialLevel={resolved?.level}>
+    <GameProvider key={levelKey} initialLevel={resolved?.level}>
       <GameBoard resolved={resolved} />
     </GameProvider>
   );
@@ -121,11 +123,8 @@ function GameBoard({ resolved }) {
   const isLastQuestion  = !nextLevel;
 
   const handleNextQuestion = () => {
-    if (nextLevel) {
-      navigate(`/game?levelId=${nextLevel.id}&difficulty=${resolved.difficulty}`);
-    } else {
-      navigate('/levels');
-    }
+    const targetDifficulty = resolved?.difficulty || 'easy';
+    navigate(`/levels?difficulty=${targetDifficulty}`);
   };
 
   const sensors = useSensors(
@@ -452,7 +451,11 @@ function GameBoard({ resolved }) {
             {submitError}
           </div>
         )}
-        <LevelComplete onNextQuestion={handleNextQuestion} isLastQuestion={isLastQuestion} />
+        <LevelComplete
+          onNextQuestion={handleNextQuestion}
+          isLastQuestion={isLastQuestion}
+          nextLabel="Back To Zone Map"
+        />
         <FlowAnimation key={`flow-${currentFlowIndex}-${currentAnimWaypoint}-${animatingBall?.ballId || 'none'}`} />
 
         <DragOverlay dropAnimation={{

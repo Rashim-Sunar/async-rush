@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ALL_LEVELS } from '../game/allLevels';
 import EngineScene from '../scene/EngineScene';
 import { api } from '../lib/api';
@@ -54,8 +54,12 @@ const NODE_H = 96;
 
 export default function LevelSelect() {
   const navigate    = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedDifficulty = searchParams.get('difficulty');
   const { user, logout } = useAuth();
-  const [difficulty, setDifficulty] = useState('easy');
+  const [difficulty, setDifficulty] = useState(
+    DIFFICULTIES.includes(requestedDifficulty) ? requestedDifficulty : 'easy'
+  );
   const [progressModel, setProgressModel] = useState(() => buildProgressModel([]));
   const [loadingProgress, setLoadingProgress] = useState(true);
   const [loadError, setLoadError] = useState('');
