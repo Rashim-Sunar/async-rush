@@ -20,7 +20,7 @@ export const generateTokenAndSetCookie = (res, userId) => {
     res.cookie('jwt', token, {
         httpOnly: true, // Prevents XSS via JS access
         secure: process.env.NODE_ENV !== 'development', // HTTPS only in production
-        sameSite: 'strict', // Prevents CSRF
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // lax allows proxy-based dev setups
         maxAge: maxAgeMs, // Matches JWT expiry
     });
 

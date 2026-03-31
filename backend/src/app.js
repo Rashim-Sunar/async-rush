@@ -17,8 +17,14 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http:/
 app.use(
     cors({
         origin: (origin, callback) => {
-            // Allow non-browser tools (no Origin header) and configured frontend origins.
-            if (!origin || allowedOrigins.includes(origin)) {
+            // Allow non-browser tools (no Origin header)
+            if (!origin) return callback(null, true);
+            // In development, allow any localhost origin (any port)
+            if (process.env.NODE_ENV !== 'production' && /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+                return callback(null, true);
+            }
+            // In production, use the allowlist
+            if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
             }
             return callback(new Error('Not allowed by CORS'));
