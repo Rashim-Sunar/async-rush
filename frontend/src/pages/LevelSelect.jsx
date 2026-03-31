@@ -66,7 +66,12 @@ export default function LevelSelect() {
   const [shakingId, setShakingId]   = useState(null);
   const scrollRef   = useRef(null);
   const containerRef = useRef(null);
-  const [containerW, setContainerW] = useState(360);
+  const [containerW, setContainerW] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Math.max(Math.round(window.innerWidth * 0.58), 360);
+    }
+    return 360;
+  });
 
   useEffect(() => {
     let active = true;
@@ -92,14 +97,31 @@ export default function LevelSelect() {
     };
   }, []);
 
-  // Measure map column width
+  // Measure map column width (with window-resize fallback for environments where ResizeObserver is unreliable)
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(([e]) => setContainerW(e.contentRect.width));
-    obs.observe(el);
-    setContainerW(el.offsetWidth);
-    return () => obs.disconnect();
+
+    const measure = () => {
+      const nextW = el.getBoundingClientRect().width;
+      if (nextW > 0) {
+        setContainerW(nextW);
+      }
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+
+    let obs;
+    if (typeof ResizeObserver !== 'undefined') {
+      obs = new ResizeObserver(measure);
+      obs.observe(el);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      if (obs) obs.disconnect();
+    };
   }, []);
 
   // Scroll map to BOTTOM so level 1 is visible first
