@@ -7,11 +7,22 @@ import gameRoutes from './routes/game.routes.js';
 
 const app = express();
 
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
 // Middleware
 // Enable CORS with options to allow cookies to be sent along with requests
 app.use(
     cors({
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: (origin, callback) => {
+            // Allow non-browser tools (no Origin header) and configured frontend origins.
+            if (!origin || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error('Not allowed by CORS'));
+        },
         credentials: true, // Crucial for HTTP-only cookies
     })
 );

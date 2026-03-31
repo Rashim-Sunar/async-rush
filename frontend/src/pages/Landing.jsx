@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Suspense, useState } from 'react';
 import EngineScene from '../scene/EngineScene';
+import { useAuth } from '../auth/AuthContext';
 
 const SUBTITLE_WORDS = 'Control the flow. Beat the chaos.'.split(' ');
 
@@ -80,7 +81,16 @@ const wordVariant = {
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [hoveredBall, setHoveredBall] = useState(null);
+
+  const handlePlayClick = () => {
+    if (!isAuthenticated) {
+      navigate('/auth?next=%2Flevels');
+      return;
+    }
+    navigate('/levels');
+  };
 
   return (
     <div style={{
@@ -299,7 +309,7 @@ export default function Landing() {
 
         {/* CTA button — delay 1.1, sonar ping */}
         <motion.button
-          onClick={() => navigate('/levels')}
+          onClick={handlePlayClick}
           initial={{ opacity: 0, y: 20 }}
           animate={{
             opacity: 1,
@@ -343,7 +353,9 @@ export default function Landing() {
               pointerEvents: 'none',
             }}
           />
-          <span style={{ position: 'relative', zIndex: 1 }}>▶ Start Playing</span>
+          <span style={{ position: 'relative', zIndex: 1 }}>
+            {isAuthenticated ? '▶ Start Playing' : '▶ Login to Play'}
+          </span>
         </motion.button>
 
         {/* Footer */}
