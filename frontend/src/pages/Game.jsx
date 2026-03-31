@@ -64,6 +64,20 @@ function GameBoard({ resolved }) {
     }
   }, [phase, resolved]);
 
+  // Next question: navigate to the next level in the same difficulty
+  const diffLevels      = resolved ? ALL_LEVELS[resolved.difficulty] : [];
+  const nextLevelIndex  = resolved ? resolved.levelNum + 1 : -1;
+  const nextLevel       = diffLevels[nextLevelIndex];
+  const isLastQuestion  = !nextLevel;
+
+  const handleNextQuestion = () => {
+    if (nextLevel) {
+      navigate(`/game?levelId=${nextLevel.id}&difficulty=${resolved.difficulty}`);
+    } else {
+      navigate('/levels');
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
@@ -352,7 +366,7 @@ function GameBoard({ resolved }) {
         </div>
 
         <FeedbackOverlay />
-        <LevelComplete />
+        <LevelComplete onNextQuestion={handleNextQuestion} isLastQuestion={isLastQuestion} />
         <FlowAnimation key={`flow-${currentFlowIndex}-${currentAnimWaypoint}-${animatingBall?.ballId || 'none'}`} />
 
         <DragOverlay dropAnimation={{
