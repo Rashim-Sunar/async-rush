@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/error.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import gameRoutes from './routes/game.routes.js';
+import userRoutes from './routes/user.routes.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use(cookieParser());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

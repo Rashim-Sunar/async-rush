@@ -3,6 +3,7 @@ import Landing from './pages/Landing';
 import LevelSelect from './pages/LevelSelect';
 import Game from './pages/Game';
 import Auth from './pages/Auth';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -16,6 +17,14 @@ export default function App() {
           element={(
             <ProtectedRoute>
               <LevelSelect />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/profile"
+          element={(
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           )}
         />

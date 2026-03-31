@@ -42,4 +42,8 @@ export const api = {
   getProgress: () => request('/api/game/progress'),
   submitLevel: (body) => request('/api/game/submit', { method: 'POST', body: JSON.stringify(body) }),
   getLevelStatus: (difficulty, level) => request(`/api/game/level/${difficulty}/${level}`),
+
+  // User profile
+  getProfile: () => request('/api/users/profile'),
+  updateProfile: (body) => request('/api/users/profile', { method: 'PATCH', body: JSON.stringify(body) }),
 };

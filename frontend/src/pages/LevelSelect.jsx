@@ -327,16 +327,61 @@ export default function LevelSelect() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            padding: '6px 10px',
-            borderRadius: 999,
-            border: '1px solid rgba(116,246,223,0.35)',
-            background: 'rgba(116,246,223,0.12)',
-            fontSize: 12,
-            fontWeight: 700,
-            color: '#7ff4df',
-          }}>
-            {user?.name || 'Player'}
+          <div
+            onClick={() => navigate('/profile')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              padding: '4px 12px 4px 4px',
+              borderRadius: 999,
+              border: '1px solid rgba(116,246,223,0.25)',
+              background: 'rgba(116,246,223,0.06)',
+              transition: 'background 0.2s, border-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(116,246,223,0.14)';
+              e.currentTarget.style.borderColor = 'rgba(116,246,223,0.45)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(116,246,223,0.06)';
+              e.currentTarget.style.borderColor = 'rgba(116,246,223,0.25)';
+            }}
+          >
+            {/* Avatar circle */}
+            {(() => {
+              const name = user?.name || 'P';
+              const initials = name.split(/[\s_-]+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+              let hash = 0;
+              for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+              const h = ((hash % 360) + 360) % 360;
+              return (
+                <div style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: `linear-gradient(135deg, hsl(${h}, 72%, 58%), hsl(${(h + 40) % 360}, 72%, 58%))`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 11,
+                  fontWeight: 900,
+                  color: '#fff',
+                  boxShadow: `0 0 10px hsla(${h}, 72%, 58%, 0.35)`,
+                  flexShrink: 0,
+                }}>
+                  {initials}
+                </div>
+              );
+            })()}
+            <span style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#7ff4df',
+            }}>
+              {user?.name || 'Player'}
+            </span>
           </div>
           <button
             onClick={async () => {
