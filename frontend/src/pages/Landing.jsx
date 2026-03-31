@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Suspense, useState } from 'react';
 import EngineScene from '../scene/EngineScene';
 import { useAuth } from '../auth/AuthContext';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const SUBTITLE_WORDS = 'Control the flow. Beat the chaos.'.split(' ');
 
@@ -82,6 +83,7 @@ const wordVariant = {
 export default function Landing() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { isMobile } = useBreakpoint();
   const [hoveredBall, setHoveredBall] = useState(null);
 
   const handlePlayClick = () => {
@@ -337,13 +339,13 @@ export default function Landing() {
             color: '#451a03',
             fontFamily: 'var(--font-display)',
             fontWeight: 900,
-            fontSize: 'clamp(16px, 3vw, 20px)',
-            padding: 'clamp(12px, 2.5vw, 16px) clamp(28px, 6vw, 52px)',
+            fontSize: 20,
+            padding: '16px 52px',
             borderRadius: 18,
             border: 'none',
             cursor: 'pointer',
             letterSpacing: 1,
-            width: 'clamp(200px, 80vw, 280px)',
+            ...(isMobile && { width: 'min(280px, 82vw)', fontSize: 17, padding: '14px 32px' }),
             textTransform: 'uppercase',
             position: 'relative',
             overflow: 'hidden',
