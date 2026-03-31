@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
  *   onNextQuestion — navigate to next question (provided by GameBoard)
  *   isLastQuestion — boolean, show "All Done" instead of "Next Question"
  */
-export default function LevelComplete({ onNextQuestion, isLastQuestion }) {
+export default function LevelComplete({ onNextQuestion, isLastQuestion, nextLabel }) {
   const { showLevelComplete, score, level, wrongMoves, actions } = useGame();
 
   const stars = wrongMoves === 0 ? 3 : wrongMoves <= 2 ? 2 : 1;
@@ -173,7 +173,9 @@ export default function LevelComplete({ onNextQuestion, isLastQuestion }) {
                       pointerEvents: 'none',
                     }}
                   />
-                  <span style={{ position: 'relative', zIndex: 1 }}>Next Question ➡️</span>
+                  <span style={{ position: 'relative', zIndex: 1 }}>
+                    {nextLabel || 'Next Question ➡️'}
+                  </span>
                 </motion.button>
               ) : (
                 <motion.button
@@ -182,7 +184,7 @@ export default function LevelComplete({ onNextQuestion, isLastQuestion }) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  🎉 Zone Complete!
+                  {nextLabel || '🎉 Zone Complete!'}
                 </motion.button>
               )}
             </motion.div>

@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ALL_LEVELS } from '../game/allLevels';
 import EngineScene from '../scene/EngineScene';
+import { api } from '../lib/api';
+import { useAuth } from '../auth/AuthContext';
 
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
 
@@ -12,16 +14,35 @@ const DIFF_META = {
   hard:   { label: 'HARD',   zone: 'III', color: '#f87171', glow: 'rgba(248,113,113,0.5)', border: 'rgba(248,113,113,0.35)' },
 };
 
-function loadProgress() {
-  try {
-    const raw = localStorage.getItem('asyncrush_progress');
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return { easy: 0, medium: 0, hard: 0 };
-}
+function buildProgressModel(progress = []) {
+  const base = () => Object.fromEntries(
+    Array.from({ length: 10 }, (_, i) => [i + 1, { isUnlocked: false, stars: 0, score: 0 }])
+  );
 
-function saveProgress(p) {
-  localStorage.setItem('asyncrush_progress', JSON.stringify(p));
+  const byDifficulty = {
+    easy: base(),
+    medium: base(),
+    hard: base(),
+  };
+
+  // Backend treats easy level 1 as implicitly unlocked.
+  byDifficulty.easy[1].isUnlocked = true;
+
+  for (const row of progress) {
+    if (!row || !byDifficulty[row.difficulty] || !byDifficulty[row.difficulty][row.level]) continue;
+    byDifficulty[row.difficulty][row.level] = {
+      isUnlocked: Boolean(row.isUnlocked),
+      stars: row.stars || 0,
+      score: row.score || 0,
+    };
+  }
+
+  const solvedCounts = DIFFICULTIES.reduce((acc, diff) => {
+    acc[diff] = Object.values(byDifficulty[diff]).filter((item) => item.stars >= 1).length;
+    return acc;
+  }, {});
+
+  return { byDifficulty, solvedCounts };
 }
 
 // Alternating X position for winding path
@@ -33,12 +54,43 @@ const NODE_H = 96;
 
 export default function LevelSelect() {
   const navigate    = useNavigate();
-  const [difficulty, setDifficulty] = useState('easy');
-  const [progress, setProgress]     = useState(loadProgress);
+  const [searchParams] = useSearchParams();
+  const requestedDifficulty = searchParams.get('difficulty');
+  const { user, logout } = useAuth();
+  const [difficulty, setDifficulty] = useState(
+    DIFFICULTIES.includes(requestedDifficulty) ? requestedDifficulty : 'easy'
+  );
+  const [progressModel, setProgressModel] = useState(() => buildProgressModel([]));
+  const [loadingProgress, setLoadingProgress] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [shakingId, setShakingId]   = useState(null);
   const scrollRef   = useRef(null);
   const containerRef = useRef(null);
   const [containerW, setContainerW] = useState(360);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchProgress = async () => {
+      setLoadingProgress(true);
+      setLoadError('');
+      try {
+        const data = await api.getProgress();
+        if (!active) return;
+        setProgressModel(buildProgressModel(data.progress || []));
+      } catch (err) {
+        if (!active) return;
+        setLoadError(err.message || 'Failed to load game progress');
+      } finally {
+        if (active) setLoadingProgress(false);
+      }
+    };
+
+    fetchProgress();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Measure map column width
   useEffect(() => {
@@ -57,15 +109,24 @@ export default function LevelSelect() {
     }
   }, [difficulty, containerW]);
 
-  const levels        = ALL_LEVELS[difficulty];
-  const completedCount = progress[difficulty];
+  const levels = ALL_LEVELS[difficulty];
+  const completedCount = progressModel.solvedCounts[difficulty];
   const totalLevels   = levels.length;
+  const levelProgress = progressModel.byDifficulty[difficulty];
+
+  const currentPlayableNum = useMemo(() => {
+    for (let levelNum = 1; levelNum <= totalLevels; levelNum += 1) {
+      const status = levelProgress[levelNum];
+      if (status?.isUnlocked && status.stars < 1) {
+        return levelNum;
+      }
+    }
+    return null;
+  }, [levelProgress, totalLevels]);
 
   const isDiffUnlocked = (d) => {
-    if (d === 'easy')   return true;
-    if (d === 'medium') return progress.easy   >= 10;
-    if (d === 'hard')   return progress.medium >= 10;
-    return false;
+    if (d === 'easy') return true;
+    return progressModel.byDifficulty[d][1].isUnlocked;
   };
 
   const shake = (id) => {
@@ -74,7 +135,11 @@ export default function LevelSelect() {
   };
 
   const handleNodeClick = (lvl, nodeNum) => {
-    if (nodeNum > completedCount) { shake(lvl.id); return; }
+    const levelNum = nodeNum + 1;
+    if (!levelProgress[levelNum]?.isUnlocked) {
+      shake(lvl.id);
+      return;
+    }
     navigate(`/game?levelId=${lvl.id}&difficulty=${difficulty}`);
   };
 
@@ -114,6 +179,47 @@ export default function LevelSelect() {
   // Fraction of path that is completed (bottom → up)
   const completedFraction = totalLevels > 0 ? completedCount / totalLevels : 0;
   const meta = DIFF_META[difficulty];
+
+  if (loadingProgress) {
+    return (
+      <div style={{
+        width: '100vw', height: '100vh', display: 'grid', placeItems: 'center',
+        background: 'linear-gradient(145deg, #0f0a2e 0%, #1a0e3e 40%, #12082e 100%)',
+        color: 'var(--color-text)', fontFamily: 'var(--font-display)',
+      }}>
+        <div style={{ fontWeight: 700, letterSpacing: 1 }}>Syncing your progression...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{
+        width: '100vw', height: '100vh', display: 'grid', placeItems: 'center',
+        background: 'linear-gradient(145deg, #0f0a2e 0%, #1a0e3e 40%, #12082e 100%)',
+        color: 'var(--color-text)', fontFamily: 'var(--font-display)',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ marginBottom: 12, color: '#fca5a5', fontWeight: 700 }}>Failed to load levels</div>
+          <div style={{ marginBottom: 16, color: 'var(--color-text-dim)', fontSize: 13 }}>{loadError}</div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              background: 'rgba(167,139,250,0.18)',
+              border: '1px solid rgba(167,139,250,0.35)',
+              borderRadius: 10,
+              padding: '8px 14px',
+              color: 'var(--color-text)',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -198,16 +304,36 @@ export default function LevelSelect() {
           }}>Async Rush</h1>
         </div>
 
-        {/* Profile placeholder (future) */}
-        <div style={{
-          width: 38, height: 38, borderRadius: '50%',
-          border: '2px dashed rgba(167,139,250,0.25)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'rgba(167,139,250,0.3)', fontSize: 18,
-          cursor: 'not-allowed',
-          title: 'Profile — coming soon',
-        }}>
-          👤
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{
+            padding: '6px 10px',
+            borderRadius: 999,
+            border: '1px solid rgba(116,246,223,0.35)',
+            background: 'rgba(116,246,223,0.12)',
+            fontSize: 12,
+            fontWeight: 700,
+            color: '#7ff4df',
+          }}>
+            {user?.name || 'Player'}
+          </div>
+          <button
+            onClick={async () => {
+              await logout();
+              navigate('/auth', { replace: true });
+            }}
+            style={{
+              background: 'rgba(248,113,113,0.12)',
+              border: '1px solid rgba(248,113,113,0.35)',
+              borderRadius: 10,
+              padding: '7px 10px',
+              color: 'rgba(248,113,113,0.92)',
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Logout
+          </button>
         </div>
       </motion.div>
 
@@ -291,13 +417,16 @@ export default function LevelSelect() {
               {/* Level nodes */}
               {levels.map((lvl, i) => {
                 const nodeNum    = i;                        // 0 = level 1
+                const levelNum = nodeNum + 1;
                 const slotFromTop = totalLevels - 1 - i;    // 0 = top, (n-1) = bottom
                 const x = getNodeX(slotFromTop, containerW);
                 const y = slotFromTop * NODE_H + 80;
 
-                const isCompleted = nodeNum < completedCount;
-                const isCurrent   = nodeNum === completedCount;
-                const isLocked    = nodeNum > completedCount;
+                const status = levelProgress[levelNum] || { isUnlocked: false, stars: 0 };
+
+                const isCompleted = status.stars >= 1;
+                const isCurrent = currentPlayableNum === levelNum;
+                const isLocked = !status.isUnlocked;
 
                 const isShaking = shakingId === lvl.id;
 
@@ -519,7 +648,7 @@ export default function LevelSelect() {
                       </div>
                       <div style={{ fontSize: 11, color: 'rgba(167,139,250,0.5)', fontWeight: 600 }}>
                         {unlocked
-                          ? `${progress[diff]} / 10 solved`
+                          ? `${progressModel.solvedCounts[diff]} / 10 solved`
                           : diff === 'medium'
                           ? 'Finish Easy to unlock'
                           : 'Finish Medium to unlock'}
@@ -533,7 +662,7 @@ export default function LevelSelect() {
                         }}>
                           <motion.div
                             initial={{ width: 0 }}
-                            animate={{ width: `${(progress[diff] / 10) * 100}%` }}
+                            animate={{ width: `${(progressModel.solvedCounts[diff] / 10) * 100}%` }}
                             transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
                             style={{
                               height: '100%', borderRadius: 2,
@@ -658,25 +787,6 @@ export default function LevelSelect() {
             ))}
           </motion.div>
 
-          {/* DEV reset — dev only */}
-          {import.meta.env.DEV && (
-            <motion.button
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-              onClick={() => {
-                const reset = { easy: 0, medium: 0, hard: 0 };
-                saveProgress(reset);
-                setProgress(reset);
-              }}
-              style={{
-                marginTop: 'auto', background: 'rgba(248,113,113,0.07)',
-                border: '1px solid rgba(248,113,113,0.18)', borderRadius: 12,
-                padding: '9px 16px', color: 'rgba(248,113,113,0.55)',
-                fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: 1,
-              }}
-            >
-              DEV: Reset Progress
-            </motion.button>
-          )}
         </div>
       </div>
     </div>

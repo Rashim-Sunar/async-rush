@@ -1,6 +1,6 @@
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback, Suspense, useEffect } from 'react';
+import { useState, useCallback, Suspense, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { GameProvider, useGame } from '../game/useGameStore';
@@ -18,6 +18,7 @@ import FeedbackOverlay from '../components/FeedbackOverlay';
 import EventLoopWidget from '../components/EventLoopWidget';
 import FlowAnimation from '../components/FlowAnimation';
 import EngineScene from '../scene/EngineScene';
+import { api } from '../lib/api';
 
 // Resolve which level to load from URL params
 function resolveLevelFromParams(searchParams) {
@@ -33,8 +34,10 @@ function resolveLevelFromParams(searchParams) {
 export default function Game() {
   const [searchParams] = useSearchParams();
   const resolved = resolveLevelFromParams(searchParams);
+  const levelKey = resolved?.level?.id || 'default-level';
+
   return (
-    <GameProvider initialLevel={resolved?.level}>
+    <GameProvider key={levelKey} initialLevel={resolved?.level}>
       <GameBoard resolved={resolved} />
     </GameProvider>
   );
@@ -43,26 +46,75 @@ export default function Game() {
 function GameBoard({ resolved }) {
   const {
     level, phase, remainingBalls, actions,
+    score, wrongMoves,
     currentFlowIndex, currentAnimWaypoint, animatingBall
   } = useGame();
 
   const navigate = useNavigate();
   const [activeBall, setActiveBall] = useState(null);
+  const [isLevelAccessible, setIsLevelAccessible] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [submitError, setSubmitError] = useState('');
+  const submittedRef = useRef(false);
 
-  // Save progress to localStorage when level completes
   useEffect(() => {
-    if (phase === 'complete' && resolved) {
-      const { difficulty, levelNum } = resolved;
-      try {
-        const raw = localStorage.getItem('asyncrush_progress');
-        const prog = raw ? JSON.parse(raw) : { easy: 0, medium: 0, hard: 0 };
-        if (levelNum + 1 > (prog[difficulty] || 0)) {
-          prog[difficulty] = levelNum + 1;
-          localStorage.setItem('asyncrush_progress', JSON.stringify(prog));
-        }
-      } catch {}
+    if (!resolved) {
+      navigate('/levels', { replace: true });
+      return;
     }
-  }, [phase, resolved]);
+
+    let active = true;
+    const checkAccess = async () => {
+      setCheckingAccess(true);
+      try {
+        const data = await api.getLevelStatus(resolved.difficulty, resolved.levelNum + 1);
+        if (!active) return;
+        if (!data.isUnlocked) {
+          navigate('/levels', { replace: true });
+          return;
+        }
+        setIsLevelAccessible(true);
+      } catch {
+        if (!active) return;
+        navigate('/levels', { replace: true });
+      } finally {
+        if (active) setCheckingAccess(false);
+      }
+    };
+
+    checkAccess();
+    return () => {
+      active = false;
+    };
+  }, [navigate, resolved]);
+
+  // Persist level completion to backend once per level run.
+  useEffect(() => {
+    if (phase !== 'complete' || !resolved || submittedRef.current) {
+      return;
+    }
+
+    submittedRef.current = true;
+    setSubmitError('');
+
+    const stars = wrongMoves === 0 ? 3 : wrongMoves <= 2 ? 2 : 1;
+    api.submitLevel({
+      difficulty: resolved.difficulty,
+      level: resolved.levelNum + 1,
+      score,
+      stars,
+    }).catch((err) => {
+      submittedRef.current = false;
+      setSubmitError(err.message || 'Progress sync failed');
+    });
+  }, [phase, resolved, score, wrongMoves]);
+
+  useEffect(() => {
+    // When user retries the level, allow a new submit attempt after completion.
+    if (phase !== 'complete') {
+      submittedRef.current = false;
+    }
+  }, [phase]);
 
   // Next question: navigate to the next level in the same difficulty
   const diffLevels      = resolved ? ALL_LEVELS[resolved.difficulty] : [];
@@ -71,11 +123,8 @@ function GameBoard({ resolved }) {
   const isLastQuestion  = !nextLevel;
 
   const handleNextQuestion = () => {
-    if (nextLevel) {
-      navigate(`/game?levelId=${nextLevel.id}&difficulty=${resolved.difficulty}`);
-    } else {
-      navigate('/levels');
-    }
+    const targetDifficulty = resolved?.difficulty || 'easy';
+    navigate(`/levels?difficulty=${targetDifficulty}`);
   };
 
   const sensors = useSensors(
@@ -106,6 +155,23 @@ function GameBoard({ resolved }) {
   const ballObjects = remainingBalls
     .map(id => level.balls.find(b => b.id === id))
     .filter(Boolean);
+
+  if (checkingAccess || !isLevelAccessible) {
+    return (
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        background: 'linear-gradient(145deg, #0f0a2e 0%, #1a0e3e 40%, #12082e 100%)',
+        color: 'var(--color-text)',
+        fontWeight: 700,
+        letterSpacing: 1,
+      }}>
+        Validating level access...
+      </div>
+    );
+  }
 
   return (
     <DndContext
@@ -366,7 +432,30 @@ function GameBoard({ resolved }) {
         </div>
 
         <FeedbackOverlay />
-        <LevelComplete onNextQuestion={handleNextQuestion} isLastQuestion={isLastQuestion} />
+        {submitError && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              zIndex: 80,
+              borderRadius: 10,
+              border: '1px solid rgba(248,113,113,0.5)',
+              background: 'rgba(127,29,29,0.75)',
+              color: '#fecaca',
+              fontSize: 12,
+              fontWeight: 700,
+              padding: '8px 12px',
+            }}
+          >
+            {submitError}
+          </div>
+        )}
+        <LevelComplete
+          onNextQuestion={handleNextQuestion}
+          isLastQuestion={isLastQuestion}
+          nextLabel="Back To Zone Map"
+        />
         <FlowAnimation key={`flow-${currentFlowIndex}-${currentAnimWaypoint}-${animatingBall?.ballId || 'none'}`} />
 
         <DragOverlay dropAnimation={{
