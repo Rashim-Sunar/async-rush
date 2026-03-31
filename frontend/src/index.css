@@ -23,10 +23,18 @@
 html, body, #root {
   width: 100%;
   height: 100%;
-  overflow: hidden;
   font-family: var(--font-display);
   background: var(--color-bg);
   color: var(--color-text);
+  -webkit-overflow-scrolling: touch;
+}
+/* Lock overflow on desktop for full-screen game experience */
+@media (min-width: 640px) {
+  html, body, #root { overflow: hidden; }
+}
+/* Allow scroll on mobile */
+@media (max-width: 639px) {
+  html, body, #root { overflow-x: hidden; overflow-y: auto; }
 }
 
 ::-webkit-scrollbar { width: 6px; }
@@ -401,6 +409,41 @@ html, body, #root {
 }
 .btn-cta:hover {
   filter: brightness(1.15);
+}
+
+/* ===== RESPONSIVE OVERRIDES ===== */
+
+/* Mobile: reduce glass blur (perf) */
+@media (max-width: 639px) {
+  .glass-card { backdrop-filter: blur(10px); }
+  .hint-bubble { backdrop-filter: blur(10px); }
+
+  /* Smaller task balls on mobile tray */
+  .task-ball {
+    width: 44px;
+    height: 44px;
+    font-size: 9px;
+  }
+
+  /* Smaller engine-box padding on mobile */
+  .engine-box {
+    padding: 8px;
+    min-height: 60px;
+    border-radius: 14px;
+  }
+
+  /* Smaller execute button */
+  .btn-execute {
+    font-size: 13px;
+    padding: 9px 18px;
+    border-radius: 12px;
+  }
+
+  /* Debris hidden on mobile */
+  .landing-debris { display: none !important; }
+
+  /* No letter-spacing pulse on mobile (can cause layout reflow) */
+  .hero-title { animation: gradient-cycle 5s ease infinite; }
 }
 
 /* ===== LANDING — FLOATING DEBRIS ===== */

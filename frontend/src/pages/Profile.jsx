@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -281,6 +282,7 @@ function ProgressSection({ difficulty, data, navigate }) {
 export default function Profile() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isMobile, isTablet } = useBreakpoint();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -348,7 +350,8 @@ export default function Profile() {
       fontFamily: 'var(--font-display)',
       color: 'var(--color-text)',
       position: 'relative',
-      overflow: 'hidden',
+      overflowX: 'hidden',
+      overflowY: isMobile ? 'auto' : 'hidden',
     }}>
       {/* ── 3D Background ── */}
       <div style={{ position: 'absolute', inset: 0, opacity: 0.25, pointerEvents: 'none', zIndex: 0 }}>
@@ -418,7 +421,7 @@ export default function Profile() {
         style={{
           position: 'relative', zIndex: 20,
           display: 'flex', alignItems: 'center',
-          padding: '16px 28px',
+          padding: isMobile ? '12px 14px' : '16px 28px',
           borderBottom: '1px solid rgba(167,139,250,0.1)',
           background: 'rgba(15,10,46,0.55)',
           backdropFilter: 'blur(12px)',
@@ -460,7 +463,7 @@ export default function Profile() {
       </motion.div>
 
       {/* Content */}
-      <div style={{ position: 'relative', zIndex: 10 }}>
+      <div style={{ position: 'relative', zIndex: 10, overflowY: isMobile ? 'visible' : 'auto', height: isMobile ? 'auto' : 'calc(100vh - 57px)' }}>
         {loading ? (
           <ProfileSkeleton />
         ) : error ? (
@@ -480,8 +483,9 @@ export default function Profile() {
         ) : (
           <div style={{
             display: 'flex',
-            gap: 40,
-            padding: '40px 48px',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? 24 : 40,
+            padding: isMobile ? '20px 16px' : isTablet ? '28px 24px' : '40px 48px',
             maxWidth: 1100,
             margin: '0 auto',
             width: '100%',
@@ -492,11 +496,12 @@ export default function Profile() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.5, ease: 'easeOut' }}
               style={{
-                flex: '0 0 280px',
+                flex: isMobile ? '0 0 auto' : '0 0 280px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 6,
+                width: isMobile ? '100%' : undefined,
               }}
             >
               {/* Avatar */}
@@ -640,7 +645,7 @@ export default function Profile() {
               style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}
             >
               {/* Stat Cards Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 10 : 16 }}>
                 <StatCard
                   icon="🏆"
                   label="Total Score"

@@ -95,13 +95,14 @@ export default function Landing() {
   return (
     <div style={{
       width: '100vw',
-      height: '100vh',
+      minHeight: '100vh',
       position: 'relative',
       overflow: 'hidden',
       background: 'linear-gradient(145deg, #0f0a2e 0%, #1a0e3e 40%, #12082e 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      padding: '24px 16px',
     }}>
 
       {/* Three.js background */}
@@ -146,10 +147,11 @@ export default function Landing() {
         />
       </div>
 
-      {/* Floating debris shapes */}
+      {/* Floating debris shapes — hidden on mobile via CSS .landing-debris */}
       {DEBRIS.map((d, i) => (
         <div
           key={i}
+          className="landing-debris"
           style={{
             position: 'absolute',
             top: d.top, left: d.left, right: d.right,
@@ -198,7 +200,7 @@ export default function Landing() {
           }}
           className="hero-title"
           style={{
-            fontSize: 'clamp(48px, 8vw, 76px)',
+            fontSize: 'clamp(2.5rem, 8vw, 4.75rem)',
             fontWeight: 900,
             margin: 0,
             textAlign: 'center',
@@ -210,7 +212,7 @@ export default function Landing() {
         </motion.h1>
 
         {/* Task balls — staggered from delay 0.6 */}
-        <div style={{ display: 'flex', gap: 20, margin: '30px 0 0' }}>
+        <div style={{ display: 'flex', gap: 'clamp(10px, 3vw, 20px)', margin: 'clamp(18px, 4vw, 30px) 0 0' }}>
           {TASK_BALLS.map((ball) => {
             const hovered = hoveredBall === ball.label;
             return (
@@ -236,7 +238,8 @@ export default function Landing() {
                       whileHover={{ scale: 1.4 }}
                       transition={{ duration: 0.2 }}
                       style={{
-                        width: 52, height: 52,
+                        width: 'clamp(36px, 6vw, 52px)',
+                        height: 'clamp(36px, 6vw, 52px)',
                         borderRadius: '50%',
                         background: ball.color,
                         boxShadow: hovered ? ball.shadowHover : ball.shadow,
@@ -293,13 +296,14 @@ export default function Landing() {
           style={{
             display: 'flex', flexWrap: 'wrap', gap: '0.4em',
             justifyContent: 'center',
-            margin: '22px 0 38px',
+            margin: 'clamp(14px, 3vw, 22px) 0 clamp(24px, 5vw, 38px)',
             fontFamily: 'var(--font-code)',
-            fontSize: 15,
+            fontSize: 'clamp(11px, 2.5vw, 15px)',
             fontWeight: 600,
-            letterSpacing: '0.2em',
+            letterSpacing: 'clamp(0.08em, 1vw, 0.2em)',
             color: '#a78bfa',
             textTransform: 'uppercase',
+            textAlign: 'center',
           }}
         >
           {SUBTITLE_WORDS.map((word, i) => (
@@ -333,12 +337,13 @@ export default function Landing() {
             color: '#451a03',
             fontFamily: 'var(--font-display)',
             fontWeight: 900,
-            fontSize: 20,
-            padding: '16px 52px',
+            fontSize: 'clamp(16px, 3vw, 20px)',
+            padding: 'clamp(12px, 2.5vw, 16px) clamp(28px, 6vw, 52px)',
             borderRadius: 18,
             border: 'none',
             cursor: 'pointer',
             letterSpacing: 1,
+            width: 'clamp(200px, 80vw, 280px)',
             textTransform: 'uppercase',
             position: 'relative',
             overflow: 'hidden',
