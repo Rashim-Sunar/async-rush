@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/banner.png" alt="Async Rush Banner" width="100%" />
+<img src="https://raw.githubusercontent.com/bivek127/async-rush/main/assets/banner2.png" alt="Async Rush Banner" width="100%" />
 
 <br/><br/>
 
