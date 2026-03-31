@@ -474,6 +474,40 @@ export default function LevelSelect() {
                       : { delay: 0.04 * (totalLevels - nodeNum), type: 'spring', stiffness: 280, damping: 22 }}
                     onClick={() => handleNodeClick(lvl, nodeNum)}
                   >
+                    {/* Earned stars above the node (shown only after level completion) */}
+                    {status.stars > 0 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: -20,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          padding: '2px 6px',
+                          borderRadius: 999,
+                          border: '1px solid rgba(251,191,36,0.28)',
+                          background: 'rgba(31,12,62,0.78)',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        {[1, 2, 3].map((star) => (
+                          <span
+                            key={star}
+                            style={{
+                              fontSize: 11,
+                              lineHeight: 1,
+                              opacity: star <= status.stars ? 1 : 0.2,
+                              filter: star <= status.stars ? 'drop-shadow(0 0 4px rgba(251,191,36,0.6))' : 'none',
+                            }}
+                          >
+                            ⭐
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Pulsing sonar ring — current node only */}
                     {isCurrent && (
                       <>
