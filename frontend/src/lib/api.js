@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// In dev, requests go to Vite's proxy (/api → localhost:5000) — no CORS needed.
+// In production, set VITE_API_BASE_URL to your deployed backend URL.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export class ApiError extends Error {
   constructor(message, status, payload) {
